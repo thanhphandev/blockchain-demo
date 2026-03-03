@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Blockchain Simulation</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="css/style.css" rel="stylesheet">
+</head>
+
+<body class="bg-dark text-light">
+    <!-- ============================================ -->
+    <!-- HEADER -->
+    <!-- ============================================ -->
+    <nav class="navbar navbar-dark bg-gradient-primary shadow-lg">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="#">
+                <i class="bi bi-box-seam-fill fs-3 me-2"></i>
+                <span class="fw-bold">Mini Blockchain</span>
+            </a>
+            <div class="d-flex align-items-center gap-3">
+                <!-- Chain Status Badge -->
+                <span id="chainStatus" class="badge bg-success fs-6 px-3 py-2">
+                    <i class="bi bi-shield-check me-1"></i>
+                    Chain Valid
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-4">
+        <!-- ============================================ -->
+        <!-- DASHBOARD SECTION -->
+        <!-- ============================================ -->
+        <section class="row g-4 mb-4">
+            <!-- Difficulty Card -->
+            <div class="col-md-3">
+                <div class="card bg-primary-dark border-0 h-100">
+                    <div class="card-body text-center">
+                        <i class="bi bi-speedometer2 fs-1 text-warning mb-2"></i>
+                        <h6 class="text-primary mb-1">Độ khó (Difficulty)</h6>
+                        <h2 id="difficultyValue" class="fw-bold text-warning mb-0">4</h2>
+                        <small class="text-primary">Hash bắt đầu bằng 4 số 0</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chain Length Card -->
+            <div class="col-md-3">
+                <div class="card bg-primary-dark border-0 h-100">
+                    <div class="card-body text-center">
+                        <i class="bi bi-link-45deg fs-1 text-info mb-2"></i>
+                        <h6 class="text-primary mb-1">Số Block</h6>
+                        <h2 id="chainLength" class="fw-bold text-info mb-0">1</h2>
+                        <small class="text-primary">Bao gồm Genesis Block</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pending Transactions Card -->
+            <div class="col-md-3">
+                <div class="card bg-primary-dark border-0 h-100">
+                    <div class="card-body text-center">
+                        <i class="bi bi-hourglass-split fs-1 text-purple mb-2"></i>
+                        <h6 class="text-primary mb-1">Mempool</h6>
+                        <h2 id="pendingCount" class="fw-bold text-purple mb-0">0</h2>
+                        <small class="text-primary">Giao dịch đang chờ</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Validate Button Card -->
+            <div class="col-md-3">
+                <div class="card bg-primary-dark border-0 h-100">
+                    <div class="card-body d-flex flex-column justify-content-center align-items-center">
+                        <button id="validateBtn" class="btn btn-outline-success btn-lg mb-2 w-100">
+                            <i class="bi bi-shield-check me-2"></i>
+                            Validate Chain
+                        </button>
+                        <button id="resetBtn" class="btn btn-outline-danger btn-sm w-100">
+                            <i class="bi bi-arrow-clockwise me-2"></i>
+                            Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================ -->
+        <!-- ACTION PANEL -->
+        <!-- ============================================ -->
+        <section class="row g-4 mb-4">
+            <!-- Add Transaction Form -->
+            <div class="col-md-6">
+                <div class="card bg-primary-dark border-0">
+                    <div class="card-header bg-transparent border-bottom border-secondary">
+                        <h5 class="mb-0 text-light">
+                            <i class="bi bi-plus-circle me-2 text-light"></i>
+                            Thêm Giao Dịch
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="txData" class="form-label text-light">Dữ liệu giao dịch:</label>
+                            <textarea id="txData" class="form-control bg-dark text-light border-secondary" rows="2"
+                                placeholder="Ví dụ: Chuyển 10 BTC từ Alice sang Bob..."></textarea>
+                        </div>
+                        <button id="addTxBtn" class="btn btn-success w-100">
+                            <i class="bi bi-plus-lg me-2"></i>
+                            Thêm vào Mempool
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mine Block Panel -->
+            <div class="col-md-6">
+                <div class="card bg-primary-dark border-0">
+                    <div class="card-header bg-transparent border-bottom border-secondary">
+                        <h5 class="mb-0 text-light">
+                            <i class="bi bi-hammer me-2 text-light"></i>
+                            Đào Block Mới
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-primary mb-3">
+                            Lấy tất cả giao dịch từ Mempool và đóng gói vào một Block mới.
+                            Quá trình đào sử dụng thuật toán <strong>Proof of Work</strong>.
+                        </p>
+                        <button id="mineBtn" class="btn btn-warning w-100 btn-lg">
+                            <span class="mining-text">
+                                <i class="bi bi-minecart-loaded me-2"></i>
+                                Mine New Block
+                            </span>
+                            <span class="mining-spinner d-none">
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                Đang đào...
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================ -->
+        <!-- MEMPOOL SECTION -->
+        <!-- ============================================ -->
+        <section id="mempoolSection" class="mb-4 d-none">
+            <div class="card bg-primary-dark border-0">
+                <div
+                    class="card-header bg-transparent border-bottom border-secondary d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-inbox me-2 text-purple"></i>
+                        Mempool - Giao Dịch Đang Chờ
+                    </h5>
+                    <span id="mempoolBadge" class="badge bg-purple">0</span>
+                </div>
+                <div class="card-body">
+                    <div id="mempoolList" class="d-flex flex-wrap gap-2">
+                        <!-- Pending transactions will be rendered here -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================ -->
+        <!-- BLOCKCHAIN VISUALIZER -->
+        <!-- ============================================ -->
+        <section>
+            <h4 class="mb-3">
+                <i class="bi bi-diagram-3 me-2"></i>
+                Blockchain Visualizer
+            </h4>
+            <div class="blockchain-container">
+                <div id="blockchainViewer" class="d-flex gap-0 overflow-auto pb-3">
+                    <!-- Blocks will be rendered here -->
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- TOAST NOTIFICATIONS -->
+    <!-- ============================================ -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="toast" class="toast" role="alert">
+            <div class="toast-header">
+                <i id="toastIcon" class="bi bi-info-circle me-2"></i>
+                <strong id="toastTitle" class="me-auto">Thông báo</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+            </div>
+            <div id="toastBody" class="toast-body">
+                Message here
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JS -->
+    <script src="js/script.js"></script>
+</body>
+
+</html>

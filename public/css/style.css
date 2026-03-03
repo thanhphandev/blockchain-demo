@@ -1,0 +1,466 @@
+/**
+ * ============================================================================
+ * STYLE.CSS - Giao diện cho Mini Blockchain Simulation
+ * ============================================================================
+ * 
+ * File này định nghĩa:
+ * - Màu sắc và gradient chủ đạo
+ * - Card styles cho blocks
+ * - Mũi tên liên kết giữa các blocks
+ * - Hiệu ứng animation
+ * 
+ * @author Tiểu luận Blockchain - Cuối kỳ
+ */
+
+/* ============================================ */
+/* CSS VARIABLES - Biến màu sắc */
+/* ============================================ */
+:root {
+    --bg-dark: #0d1117;
+    --bg-card: #161b22;
+    --bg-card-hover: #1f2937;
+    --border-color: #30363d;
+    --text-primary: #f0f6fc;
+    --text-secondary: #8b949e;
+    --accent-blue: #58a6ff;
+    --accent-green: #3fb950;
+    --accent-red: #f85149;
+    --accent-yellow: #d29922;
+    --accent-purple: #a371f7;
+    --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --gradient-success: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    --gradient-danger: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+    --gradient-warning: linear-gradient(135deg, #f2994a 0%, #f2c94c 100%);
+}
+
+/* ============================================ */
+/* BASE STYLES */
+/* ============================================ */
+body {
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh;
+}
+
+/* ============================================ */
+/* NAVBAR */
+/* ============================================ */
+.bg-gradient-primary {
+    background: var(--gradient-primary) !important;
+}
+
+/* ============================================ */
+/* CARD STYLES */
+/* ============================================ */
+.bg-primary-dark {
+    background-color: var(--bg-card) !important;
+}
+
+.card {
+    border-radius: 12px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+/* ============================================ */
+/* CUSTOM COLORS */
+/* ============================================ */
+.text-purple {
+    color: var(--accent-purple) !important;
+}
+
+.bg-purple {
+    background-color: var(--accent-purple) !important;
+}
+
+/* ============================================ */
+/* BLOCKCHAIN CONTAINER */
+/* ============================================ */
+.blockchain-container {
+    background: linear-gradient(to right, var(--bg-card), transparent);
+    border-radius: 12px;
+    padding: 20px;
+}
+
+#blockchainViewer {
+    padding-bottom: 10px;
+}
+
+#blockchainViewer::-webkit-scrollbar {
+    height: 8px;
+}
+
+#blockchainViewer::-webkit-scrollbar-track {
+    background: var(--bg-dark);
+    border-radius: 4px;
+}
+
+#blockchainViewer::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+#blockchainViewer::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
+}
+
+/* ============================================ */
+/* BLOCK CARD STYLES */
+/* ============================================ */
+.block-card {
+    min-width: 320px;
+    max-width: 320px;
+    background: var(--bg-card);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.block-card:hover {
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 20px rgba(88, 166, 255, 0.2);
+}
+
+.block-card.genesis {
+    border-color: var(--accent-yellow);
+}
+
+.block-card.genesis:hover {
+    box-shadow: 0 0 20px rgba(210, 153, 34, 0.3);
+}
+
+.block-card.invalid {
+    border-color: var(--accent-red) !important;
+    animation: shake 0.5s ease-in-out;
+}
+
+.block-card.invalid:hover {
+    box-shadow: 0 0 20px rgba(248, 81, 73, 0.3);
+}
+
+/* Block Header */
+.block-header {
+    background: linear-gradient(135deg, var(--bg-card-hover), var(--bg-card));
+    padding: 12px 16px;
+    border-radius: 10px 10px 0 0;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.block-header .block-index {
+    font-weight: bold;
+    font-size: 1.2em;
+}
+
+.block-header .block-time {
+    font-size: 0.8em;
+    color: var(--text-secondary);
+}
+
+/* Block Body */
+.block-body {
+    padding: 16px;
+}
+
+.block-field {
+    margin-bottom: 12px;
+}
+
+.block-field:last-child {
+    margin-bottom: 0;
+}
+
+.block-field-label {
+    font-size: 0.75em;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.block-field-value {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 0.85em;
+    background: var(--bg-dark);
+    padding: 8px 12px;
+    border-radius: 6px;
+    word-break: break-all;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.block-field-value.hash {
+    color: var(--accent-blue);
+}
+
+.block-field-value.prev-hash {
+    color: var(--accent-purple);
+}
+
+.block-field-value.data {
+    color: var(--accent-green);
+    max-height: 60px;
+    overflow-y: auto;
+}
+
+.block-field-value.nonce {
+    color: var(--accent-yellow);
+}
+
+/* Copy Button */
+.copy-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.copy-btn:hover {
+    background: var(--border-color);
+    color: var(--text-primary);
+}
+
+/* Block Actions */
+.block-actions {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    gap: 8px;
+}
+
+.block-actions .btn {
+    flex: 1;
+    font-size: 0.85em;
+}
+
+/* ============================================ */
+/* CHAIN ARROW - Mũi tên liên kết */
+/* ============================================ */
+.chain-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 60px;
+    position: relative;
+}
+
+.chain-arrow::before {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 4px;
+    background: var(--gradient-success);
+    border-radius: 2px;
+}
+
+.chain-arrow::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    width: 0;
+    height: 0;
+    border-top: 10px solid transparent;
+    border-bottom: 10px solid transparent;
+    border-left: 15px solid #38ef7d;
+}
+
+.chain-arrow.invalid::before {
+    background: var(--gradient-danger);
+    animation: pulse-line 1s ease-in-out infinite;
+}
+
+.chain-arrow.invalid::after {
+    border-left-color: #f45c43;
+    animation: pulse-arrow 1s ease-in-out infinite;
+}
+
+/* Broken link effect */
+.chain-arrow.broken::before {
+    background: var(--accent-red);
+    width: 30%;
+    left: 0;
+}
+
+.chain-arrow.broken::after {
+    display: none;
+}
+
+.chain-arrow.broken .break-icon {
+    color: var(--accent-red);
+    font-size: 1.5em;
+    position: absolute;
+    animation: pulse 1s ease-in-out infinite;
+}
+
+/* ============================================ */
+/* MEMPOOL TRANSACTION CHIPS */
+/* ============================================ */
+.tx-chip {
+    background: var(--bg-dark);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-size: 0.85em;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 200px;
+}
+
+.tx-chip .tx-data {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tx-chip .tx-time {
+    font-size: 0.75em;
+    color: var(--text-secondary);
+}
+
+/* ============================================ */
+/* ANIMATIONS */
+/* ============================================ */
+@keyframes shake {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    25% {
+        transform: translateX(-5px);
+    }
+
+    50% {
+        transform: translateX(5px);
+    }
+
+    75% {
+        transform: translateX(-5px);
+    }
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.5;
+        transform: scale(1.1);
+    }
+}
+
+@keyframes pulse-line {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+@keyframes pulse-arrow {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+@keyframes mining-glow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 5px var(--accent-yellow);
+    }
+
+    50% {
+        box-shadow: 0 0 25px var(--accent-yellow), 0 0 50px var(--accent-yellow);
+    }
+}
+
+/* Mining state */
+.btn-warning.mining {
+    animation: mining-glow 1s ease-in-out infinite;
+}
+
+/* ============================================ */
+/* TOAST CUSTOMIZATION */
+/* ============================================ */
+.toast {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+}
+
+.toast-header {
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+.toast-body {
+    color: var(--text-primary);
+}
+
+/* ============================================ */
+/* UTILITY CLASSES */
+/* ============================================ */
+.text-truncate-hash {
+    max-width: 180px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Form inputs dark mode */
+.form-control.bg-dark {
+    background-color: var(--bg-dark) !important;
+    color: var(--text-primary);
+}
+
+.form-control.bg-dark:focus {
+    background-color: var(--bg-dark) !important;
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 0.2rem rgba(88, 166, 255, 0.25);
+}
+
+.form-control.bg-dark::placeholder {
+    color: var(--text-secondary);
+}
+
+/* ============================================ */
+/* RESPONSIVE */
+/* ============================================ */
+@media (max-width: 768px) {
+    .block-card {
+        min-width: 280px;
+        max-width: 280px;
+    }
+
+    .chain-arrow {
+        min-width: 40px;
+    }
+}
