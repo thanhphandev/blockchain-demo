@@ -42,10 +42,9 @@ const sockets = [];
 const initP2PServer = () => {
     const server = new WebSocket.Server({ port: WS_PORT });
     server.on('connection', (ws) => {
-        console.log(`📡 Kết nối P2P mới được thiết lập (Cổng ${WS_PORT}).`);
         initConnection(ws);
     });
-    console.log(`📡 P2P WebSocket Server đang chạy tại cổng: ${WS_PORT}`);
+    console.log(`📡 P2P Server đang lắng nghe tại cổng: ${WS_PORT}`);
 };
 
 const initConnection = (ws) => {
@@ -92,13 +91,29 @@ const write = (ws, message) => ws.send(JSON.stringify(message));
 
 const connectToNodes = (newNodes) => {
     newNodes.forEach(nodeUrl => {
+        // Tránh kết nối tới chính mình hoặc kết nối trùng lặp
+        if (networkNodes.includes(nodeUrl)) return;
+        
         try {
             const url = new URL(nodeUrl);
-            const wsUrl = `ws://${url.hostname}:${parseInt(url.port) + 1000}`;
             if (parseInt(url.port) === PORT) return;
+            
+            const wsUrl = `ws://${url.hostname}:${parseInt(url.port) + 1000}`;
             const ws = new WebSocket(wsUrl);
-            ws.on('open', () => initConnection(ws));
-            ws.on('error', () => {});
+            
+            ws.on('open', () => {
+                networkNodes.push(nodeUrl);
+                initConnection(ws);
+            });
+            
+            ws.on('error', () => {
+                // Im lặng khi không kết nối được (có thể node đó chưa bật)
+            });
+            
+            ws.on('close', () => {
+                const index = networkNodes.indexOf(nodeUrl);
+                if (index > -1) networkNodes.splice(index, 1);
+            });
         } catch (err) {}
     });
 };
