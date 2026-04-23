@@ -64,6 +64,13 @@ const initConnection = (ws) => {
     ws.on('close', () => {
         const index = sockets.indexOf(ws);
         if (index > -1) sockets.splice(index, 1);
+        
+        // Tìm và xóa khỏi networkNodes nếu có nodeUrl gắn kèm
+        const nodeUrl = ws.nodeUrl;
+        if (nodeUrl) {
+            const nIndex = networkNodes.indexOf(nodeUrl);
+            if (nIndex > -1) networkNodes.splice(nIndex, 1);
+        }
     });
 
     ws.on('error', () => {
@@ -71,23 +78,33 @@ const initConnection = (ws) => {
         if (index > -1) sockets.splice(index, 1);
     });
     
-    // Gửi yêu cầu đồng bộ ngay khi kết nối
+    // 1. Gửi định danh (HTTP URL) của mình cho peer mới
+    write(ws, { 
+        type: 'HANDSHAKE', 
+        data: { nodeUrl: `http://localhost:${PORT}` } 
+    });
+
+    // 2. Gửi yêu cầu đồng bộ ngay khi kết nối
     write(ws, { type: 'REQUEST_CHAIN' });
 };
 
 const handleMessage = (ws, message) => {
     switch (message.type) {
+        case 'HANDSHAKE':
+            const remoteUrl = message.data.nodeUrl;
+            if (remoteUrl && !networkNodes.includes(remoteUrl)) {
+                console.log(`🤝 Nhận handshake từ peer: ${remoteUrl}`);
+                networkNodes.push(remoteUrl);
+                ws.nodeUrl = remoteUrl; // Lưu URL vào socket để quản lý khi đóng
+            }
+            break;
         case 'NEW_TRANSACTION':
             try {
                 const tx = message.data;
-                // Khởi tạo lại Transaction để có các phương thức cần thiết (như isValid)
                 const newTx = new Transaction(tx.fromAddress, tx.toAddress, tx.amount, tx.timestamp);
                 newTx.signature = tx.signature;
-                
-                // Nếu có trường data bổ sung
                 if (tx.data) newTx.data = tx.data;
 
-                // addTransaction sẽ ném lỗi nếu không hợp lệ (bao gồm Double Spending)
                 if (myBlockchain.addTransaction(newTx)) {
                     console.log('📩 Nhận giao dịch mới qua P2P.');
                 }
@@ -96,8 +113,13 @@ const handleMessage = (ws, message) => {
             }
             break;
         case 'NEW_BLOCK':
-            console.log('📦 Nhận thông báo có Block mới! Đang đồng bộ...');
-            resolveConflictsInternal();
+            console.log('📦 Nhận thông báo có Block mới! Đang yêu cầu đồng bộ từ sender...');
+            // Hỏi trực tiếp node vừa gửi block để lấy chuỗi mới nhất
+            write(ws, { type: 'REQUEST_CHAIN' });
+            break;
+        case 'CHAIN_UPDATED':
+            console.log('⛓️ Nhận thông báo chuỗi cập nhật!');
+            handleChainResponse(message.data, ws);
             break;
         case 'REQUEST_CHAIN':
             write(ws, { type: 'RESPONSE_CHAIN', data: myBlockchain.chain });
@@ -141,31 +163,40 @@ const connectToNodes = (newNodes) => {
             if (networkNodes.includes(nodeUrl)) return;
             
             // 3. Cơ chế tránh kết nối 2 chiều (Symmetric Connection)
-            // QUY TẮC: Chỉ node có cổng thấp hơn được phép chủ động kết nối tới node có cổng cao hơn
-            // Điều này đảm bảo giữa Node 3000 và 3001 chỉ có DUY NHẤT 1 kết nối (3000 -> 3001)
             if (PORT > nodePort) {
-                // Node này có cổng cao hơn, nó sẽ đợi node cổng thấp hơn kết nối tới nó
-                // console.log(`ℹ️ Node ${PORT} đợi Node ${nodePort} chủ động kết nối...`);
                 return;
             }
 
             const wsUrl = `ws://${url.hostname}:${nodePort + 1000}`;
-            const ws = new WebSocket(wsUrl);
             
-            ws.on('open', () => {
-                console.log(`🔗 Đã kết nối thành công tới peer: ${nodeUrl}`);
-                networkNodes.push(nodeUrl);
-                initConnection(ws);
-            });
-            
-            ws.on('error', () => {
-                // Im lặng khi không kết nối được
-            });
-            
-            ws.on('close', () => {
-                const index = networkNodes.indexOf(nodeUrl);
-                if (index > -1) networkNodes.splice(index, 1);
-            });
+            const attemptConnection = () => {
+                // Kiểm tra lại xem đã có kết nối chưa (tránh chồng chéo khi retry)
+                if (networkNodes.includes(nodeUrl)) return;
+
+                const ws = new WebSocket(wsUrl);
+                
+                ws.on('open', () => {
+                    console.log(`🔗 Đã kết nối thành công tới peer: ${nodeUrl}`);
+                    if (!networkNodes.includes(nodeUrl)) {
+                        networkNodes.push(nodeUrl);
+                    }
+                    initConnection(ws);
+                });
+                
+                ws.on('error', (err) => {
+                    // console.log(`⏳ Đang thử kết nối lại tới ${nodeUrl} sau 5 giây...`);
+                    setTimeout(attemptConnection, 5000); 
+                });
+                
+                ws.on('close', () => {
+                    const index = networkNodes.indexOf(nodeUrl);
+                    if (index > -1) networkNodes.splice(index, 1);
+                    // Khi mất kết nối, thử kết nối lại
+                    setTimeout(attemptConnection, 5000);
+                });
+            };
+
+            attemptConnection();
         } catch (err) {}
     });
 };
