@@ -128,8 +128,14 @@
                                 </button>
                             </form>
                             <button id="btn-consensus" class="btn btn-primary" style="margin-top: 1rem">
-                                    <i data-lucide="zap"></i> Đồng Bộ Với Mạng Lưới
+                                <i data-lucide="zap"></i> Đồng Bộ Với Mạng Lưới
                             </button>
+                            <div class="p2p-status" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                                <h4 style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 0.75rem;">Các Nút Đang Kết Nối (<span id="p2p-count">0</span>)</h4>
+                                <ul id="p2p-list" style="list-style: none; padding: 0; margin: 0; font-family: var(--font-mono); font-size: 0.75rem;">
+                                    <li style="color: var(--text-muted); font-style: italic;">Chưa có kết nối nào...</li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
 
@@ -144,7 +150,7 @@
                                 <button id="btn-mine" class="btn btn-warning">
                                     <i data-lucide="pickaxe"></i>
                                     <span id="mine-btn-text">Khai Thác Giao Dịch Đang Chờ</span>
-                                    <span id="mine-hash-counter" style="display:none"></span>
+                                    <span id="mine-hash-counter" style="display: none;"></span>
                                 </button>
                                 <button id="btn-validate" class="btn btn-success" style="margin-top: 0.75rem">
                                     <i data-lucide="check-circle"></i> Kiểm Tra Tính Toàn Vẹn

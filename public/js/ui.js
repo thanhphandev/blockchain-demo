@@ -182,6 +182,25 @@ export function setMempoolBadge(count) {
     if (el) el.textContent = count;
 }
 
+export function setP2PStatus(peers, currentNode) {
+    const countEl = document.getElementById('p2p-count');
+    const listEl = document.getElementById('p2p-list');
+    
+    if (countEl) countEl.textContent = peers.length;
+    if (listEl) {
+        if (peers.length === 0) {
+            listEl.innerHTML = '<li style="color: var(--text-muted); font-style: italic">Chưa có kết nối nào...</li>';
+        } else {
+            listEl.innerHTML = peers.map(peer => `
+                <li style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px; color: var(--accent-success);">
+                    <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent-success); box-shadow: 0 0 5px var(--accent-success);"></span>
+                    ${peer} ${peer === currentNode ? '<span style="color: var(--text-muted); font-size: 0.65rem;">(Bạn)</span>' : ''}
+                </li>
+            `).join('');
+        }
+    }
+}
+
 /* =========================================================
    MISC HELPERS
    ========================================================= */

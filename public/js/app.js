@@ -9,7 +9,8 @@ import {
   registerNode,
   resolveConflicts,
   tamperBlock,
-  resetChain
+  resetChain,
+  getInfo
 } from './api.js';
 
 import {
@@ -33,6 +34,7 @@ import {
   setWalletBalance,
   setChainValidity,
   setMempoolBadge,
+  setP2PStatus,
   copyToClipboard
 } from './ui.js';
 
@@ -109,7 +111,8 @@ async function refreshData(showValidationToast = false) {
     getChain(),
     getPendingTransactions(),
     getDifficulty(),
-    validateChain()
+    validateChain(),
+    getInfo()
   ]);
 
   state.chain = chainRes.chain;
@@ -128,6 +131,8 @@ async function refreshData(showValidationToast = false) {
     difficulty: difficultyRes.difficulty,
     isValid: validRes.valid
   });
+  
+  setP2PStatus(infoRes.peers, infoRes.currentNode);
 
   await refreshWalletBalance();
   

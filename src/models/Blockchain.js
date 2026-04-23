@@ -77,9 +77,28 @@ class Blockchain {
             throw new Error('❌ Giao dịch phải có địa chỉ người gửi và người nhận!');
         }
 
-        // 1. Xác minh chữ ký số
+        // 1. Kiểm tra chữ ký
         if (!transaction.isValid()) {
             throw new Error('❌ Chữ ký giao dịch không hợp lệ!');
+        }
+
+        // 2. Kiểm tra trùng lặp trong Mempool (Hàng đợi)
+        const isDuplicateMempool = this.pendingTransactions.some(tx => 
+            tx.calculateHash && tx.calculateHash() === transaction.calculateHash()
+        );
+        if (isDuplicateMempool) {
+            console.log('⚠️ Giao dịch đã tồn tại trong Mempool, bỏ qua.');
+            return false;
+        }
+
+        // 3. Kiểm tra xem giao dịch đã tồn tại trong Blockchain chưa (Tránh Replay Attack)
+        for (const block of this.chain) {
+            const isAlreadyOnChain = block.transactions.some(tx => 
+                tx.calculateHash && tx.calculateHash() === transaction.calculateHash()
+            );
+            if (isAlreadyOnChain) {
+                throw new Error('❌ Giao dịch này đã được xác nhận trong một khối trước đó!');
+            }
         }
 
         if (transaction.amount <= 0) {

@@ -79,3 +79,6 @@ export function registerNode(nodeUrl) {
 export function resolveConflicts() {
   return request('/resolve-conflicts');
 }
+export function getInfo() {
+  return request('/info');
+}

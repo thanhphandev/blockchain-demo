@@ -556,7 +556,9 @@ app.get('/balance/:address', (req, res) => {
 app.get('/info', (req, res) => {
     res.json({
         success: true,
-        ...myBlockchain.getChainInfo()
+        ...myBlockchain.getChainInfo(),
+        peers: networkNodes,
+        currentNode: `http://localhost:${PORT}`
     });
 });
 
