@@ -53,12 +53,13 @@ npm run network
 
 ### Giai Đoạn 5: Sự Đồng Thuận & Chuỗi Dài Nhất (Consensus)
 *Mục tiêu: Hiểu cách mạng lưới giải quyết mâu thuẫn.*
-1.  Ngắt kết nối mạng (hoặc giả lập bằng cách đào riêng lẻ).
-2.  Cho **Node 1** đào thêm 3 block.
-3.  Cho **Node 2** đào thêm 1 block.
-4.  Khi hai node kết nối lại: Nhấn **"Đồng Bộ"**.
-5.  **Kết quả**: **Node 2** sẽ tự động hủy bỏ 1 block của mình và tải về 3 block từ **Node 1**.
-6.  **Nguyên tắc**: "The longest chain is the truth" (Chuỗi dài nhất là sự thật).
+1.  **Tự động kết nối**: Hệ thống v3.0 đã tích hợp cơ chế **Auto-Discovery**. Khi bạn chạy `npm run network`, các node 3000, 3001, 3002 sẽ tự động tìm thấy và kết nối WebSocket với nhau.
+2.  **Mô phỏng Xung Đột**:
+    - F12 (Console) để kiểm tra các node đã `Connection established`.
+    - Cho **Node 1** đào thêm 3 block.
+    - Cho **Node 2** giữ nguyên (hoặc đào ít hơn).
+3.  **Đồng bộ tức thời**: Nhờ WebSocket, ngay khi Node 1 đào xong, Node 2 sẽ nhận được thông báo và tự động cập nhật chuỗi của mình để khớp với "Chuỗi dài nhất".
+4.  **Kiểm tra thủ công (Nếu cần)**: Nếu một node bị mất mạng, bạn vẫn có thể nhấn nút **"Đồng Bộ Với Mạng Lưới"** để ép buộc hệ thống kiểm tra lại trạng thái.
 
 ### Giai Đoạn 6: Tính Bất Biến & Tấn Công Giả Mạo (Immutability)
 *Mục tiêu: Thấy được sức mạnh của mã hóa Hash.*

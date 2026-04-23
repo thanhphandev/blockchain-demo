@@ -554,6 +554,11 @@ app.listen(PORT, () => {
     // Khởi tạo P2P WebSocket Server
     initP2PServer();
 
+    // Tự động kết nối tới các node mặc định trong mạng lưới (localhost:3000, 3001, 3002)
+    const defaultNodes = ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002'];
+    console.log('🔄 Đang tự động kết nối tới các nút mạng lân cận...');
+    connectToNodes(defaultNodes);
+
     console.log(`
 ╔═══════════════════════════════════════════════════════════╗
 ║                                                           ║
