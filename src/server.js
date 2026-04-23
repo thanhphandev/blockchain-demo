@@ -20,7 +20,7 @@ const axios = require('axios');
 const WebSocket = require('ws');
 const Blockchain = require('./models/Blockchain');
 const Transaction = require('./models/Transaction');
-const Block = require('./models/Block');
+
 
 // ============================================
 // KHỞI TẠO SERVER VÀ BLOCKCHAIN
@@ -107,6 +107,8 @@ const handleMessage = (ws, message) => {
 
                 if (myBlockchain.addTransaction(newTx)) {
                     console.log('📩 Nhận giao dịch mới qua P2P.');
+                    // BROADCAST TIẾP CHO CÁC LOCAL LISTENERS (TRÌNH DUYỆT)
+                    broadcast({ type: 'NEW_TRANSACTION', data: tx }, ws);
                 }
             } catch (err) {
                 console.error('❌ Lỗi khi xử lý giao dịch P2P:', err.message);
@@ -203,7 +205,7 @@ const connectToNodes = (newNodes) => {
 
 const handleChainResponse = (receivedChain, originatingSocket) => {
     if (myBlockchain.replaceChain(receivedChain)) {
-        // Lan tỏa thông báo cập nhật chuỗi nhưng tránh gửi ngược lại người vừa gửi cho mình
+        // Lan tỏa thông báo cập nhật chuỗi tới tất cả các node khác và trình duyệt
         broadcast({ type: 'CHAIN_UPDATED', data: myBlockchain.chain }, originatingSocket);
         console.log('✅ Chuỗi đã được cập nhật từ node khác.');
     }

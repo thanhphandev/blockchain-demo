@@ -216,10 +216,6 @@ code, .mono {
     gap: 1rem;
 }
 
-.action-card {
-    border-bottom: 3px solid var(--accent-primary);
-}
-
 .action-card .card-header {
     justify-content: space-between;
 }
@@ -364,6 +360,7 @@ input:focus {
 }
 
 .visualizer-container {
+    margin-top: 1.25rem;
     width: 100%;
     overflow: hidden;
 }

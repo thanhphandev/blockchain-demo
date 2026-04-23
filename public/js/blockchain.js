@@ -6,19 +6,19 @@
 export function renderChain(chain, validation = { valid: true, invalidBlockIndex: null }) {
     const container = document.getElementById('blockchain-container');
     if (!container) return;
-    
+
     container.innerHTML = '';
-    
+
     chain.forEach((block, index) => {
         const isInvalid = !validation.valid && index >= validation.invalidBlockIndex;
         const blockEl = document.createElement('div');
         blockEl.className = `block-card ${index === 0 ? 'genesis' : ''} ${isInvalid ? 'invalid' : ''}`;
-        
+
         // Check if block is valid (logic can be added here or via separate call)
         // For visual demo, we assume valid unless marked
-        
+
         const timestamp = new Date(block.timestamp).toLocaleString();
-        
+
         blockEl.innerHTML = `
             <div class="block-header">
                 <span class="block-idx">KHỐI #${index}</span>
@@ -26,7 +26,7 @@ export function renderChain(chain, validation = { valid: true, invalidBlockIndex
                     <span class="block-time">${timestamp}</span>
                     <button class="btn-tamper" data-index="${index}" title="Tamper with this block" 
                             style="background: none; border: none; padding: 2px; cursor: pointer; color: var(--text-muted);">
-                        <i data-lucide="zap" style="width: 14px;"></i>
+                        <i data-lucide="bug" style="width: 14px;"></i>
                     </button>
                 </div>
             </div>
@@ -56,9 +56,9 @@ export function renderChain(chain, validation = { valid: true, invalidBlockIndex
                 </div>
             </div>
         `;
-        
+
         container.appendChild(blockEl);
-        
+
         // Add arrow if not last block
         if (index < chain.length - 1) {
             const arrow = document.createElement('div');
@@ -84,7 +84,7 @@ function renderBlockTransactions(transactions) {
     if (!transactions || transactions.length === 0) {
         return `<div style="text-align: center; padding: 1rem; color: var(--text-muted); font-size: 0.75rem;">Không có giao dịch</div>`;
     }
-    
+
     return transactions.map(tx => {
         // Handle mining rewards differently
         const isReward = !tx.fromAddress;
@@ -108,12 +108,12 @@ function renderBlockTransactions(transactions) {
 export function renderMempool(mempool) {
     const container = document.getElementById('mempool-items');
     const countLabel = document.getElementById('mempool-count');
-    
+
     if (!container) return;
-    
+
     container.innerHTML = '';
     countLabel.innerText = mempool.length;
-    
+
     if (mempool.length === 0) {
         container.innerHTML = `
             <div style="grid-column: 1/-1; text-align: center; padding: 2rem; background: #fff; border: 1px dashed var(--border-base); border-radius: 12px; color: var(--text-muted);">
