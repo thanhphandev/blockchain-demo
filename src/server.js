@@ -16,7 +16,9 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const axios = require('axios');
 const Blockchain = require('./models/Blockchain');
+const Transaction = require('./models/Transaction');
 
 // ============================================
 // KHỞI TẠO SERVER VÀ BLOCKCHAIN
@@ -26,8 +28,10 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Khởi tạo Blockchain instance
-// Đây là "sổ cái" chính của hệ thống
 const myBlockchain = new Blockchain();
+
+// Danh sách các node trong mạng P2P
+const networkNodes = [];
 
 // ============================================
 // MIDDLEWARE CONFIGURATION
@@ -98,29 +102,54 @@ app.get('/difficulty', (req, res) => {
  *   transaction: Object
  * }
  */
-app.post('/add-transaction', (req, res) => {
-    const { data } = req.body;
+app.post('/add-transaction', async (req, res) => {
+    const { fromAddress, toAddress, amount, signature, timestamp } = req.body;
 
-    // Kiểm tra dữ liệu đầu vào
-    if (!data) {
-        return res.status(400).json({
+    try {
+        const tx = new Transaction(fromAddress, toAddress, amount, timestamp);
+        tx.signature = signature;
+
+        myBlockchain.addTransaction(tx);
+
+        // LAN TỎA (BROADCAST) Giao dịch tới các node khác trong mạng
+        networkNodes.forEach(async (node) => {
+            try {
+                await axios.post(`${node}/receive-transaction`, req.body);
+            } catch (err) {
+                console.error(`❌ Không thể lan tỏa giao dịch tới ${node}`);
+            }
+        });
+
+        res.json({
+            success: true,
+            message: "✅ Giao dịch đã được thêm vào Mempool và lan tỏa tới mạng lưới!",
+            pendingCount: myBlockchain.pendingTransactions.length
+        });
+    } catch (error) {
+        res.status(400).json({
             success: false,
-            message: "❌ Vui lòng cung cấp dữ liệu giao dịch (data)"
+            message: error.message
         });
     }
+});
 
-    // Tạo object giao dịch
-    const transaction = { data };
-
-    // Thêm vào Mempool
-    myBlockchain.addTransaction(transaction);
-
-    res.json({
-        success: true,
-        message: "✅ Giao dịch đã được thêm vào Mempool!",
-        pendingCount: myBlockchain.pendingTransactions.length,
-        transaction: myBlockchain.pendingTransactions[myBlockchain.pendingTransactions.length - 1]
-    });
+/**
+ * POST /receive-transaction
+ * Nhận giao dịch được lan tỏa từ các node khác (không re-broadcast để tránh lặp vô tận)
+ */
+app.post('/receive-transaction', (req, res) => {
+    const { fromAddress, toAddress, amount, signature, timestamp } = req.body;
+    try {
+        const tx = new Transaction(fromAddress, toAddress, amount, timestamp);
+        tx.signature = signature;
+        
+        // Thêm trực tiếp vào Mempool (Skip broadcast)
+        myBlockchain.addTransaction(tx);
+        
+        res.json({ success: true, message: "📥 Đã nhận giao dịch lan tỏa." });
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
 });
 
 /**
@@ -160,15 +189,33 @@ app.get('/pending', (req, res) => {
  *   block: Block
  * }
  */
-app.get('/mine', (req, res) => {
+app.get('/mine', async (req, res) => {
+    const { minerAddress } = req.query;
+
+    if (!minerAddress) {
+        return res.status(400).json({
+            success: false,
+            message: "❌ Vui lòng cung cấp địa chỉ ví thợ đào (minerAddress)"
+        });
+    }
+
     console.log('\n📦 Yêu cầu đào block mới...');
 
     // Thực hiện đào block
-    const newBlock = myBlockchain.minePendingTransactions();
+    const newBlock = myBlockchain.minePendingTransactions(minerAddress);
+
+    // THÔNG BÁO CHO MẠNG LƯỚI đồng bộ hóa
+    networkNodes.forEach(async (node) => {
+        try {
+            await axios.get(`${node}/resolve-conflicts`);
+        } catch (err) {
+            console.log(`Node ${node} không phản hồi thông báo đào block.`);
+        }
+    });
 
     res.json({
         success: true,
-        message: `✅ Block #${newBlock.index} đã được đào thành công!`,
+        message: `✅ Block #${newBlock.index} đã được đào thành công và thông báo tới mạng lưới!`,
         block: newBlock,
         chainLength: myBlockchain.chain.length
     });
@@ -180,22 +227,33 @@ app.get('/mine', (req, res) => {
  * 
  * Body: { data: "Nội dung giao dịch" }
  */
-app.post('/mine', (req, res) => {
-    const { data } = req.body;
+app.post('/mine', async (req, res) => {
+    const { minerAddress } = req.body;
 
-    // Nếu có data, thêm vào pending trước
-    if (data) {
-        myBlockchain.addTransaction({ data });
+    if (!minerAddress) {
+        return res.status(400).json({
+            success: false,
+            message: "❌ Vui lòng cung cấp địa chỉ ví thợ đào (minerAddress)"
+        });
     }
 
-    console.log('\n📦 Yêu cầu đào block mới với dữ liệu trực tiếp...');
+    console.log('\n📦 Yêu cầu đào block mới...');
 
     // Thực hiện đào block
-    const newBlock = myBlockchain.minePendingTransactions();
+    const newBlock = myBlockchain.minePendingTransactions(minerAddress);
+
+    // THÔNG BÁO CHO MẠNG LƯỚI đồng bộ hóa
+    networkNodes.forEach(async (node) => {
+        try {
+            await axios.get(`${node}/resolve-conflicts`);
+        } catch (err) {
+            console.log(`Node ${node} không phản hồi thông báo đào block.`);
+        }
+    });
 
     res.json({
         success: true,
-        message: `✅ Block #${newBlock.index} đã được đào thành công!`,
+        message: `✅ Block #${newBlock.index} đã được đào thành công và thông báo tới mạng lưới!`,
         block: newBlock,
         chainLength: myBlockchain.chain.length
     });
@@ -246,7 +304,6 @@ app.post('/tamper/:index', (req, res) => {
     const index = parseInt(req.params.index);
     const { newData } = req.body;
 
-    // Kiểm tra dữ liệu đầu vào
     if (!newData) {
         return res.status(400).json({
             success: false,
@@ -254,14 +311,100 @@ app.post('/tamper/:index', (req, res) => {
         });
     }
 
-    // Thực hiện "tấn công"
-    const result = myBlockchain.tamperBlock(index, { data: newData });
+    // Thực hiện "tấn công" bằng cách sửa giao dịch đầu tiên (nếu có) hoặc thay thế toàn bộ
+    const result = myBlockchain.tamperBlock(index, newData);
 
     if (result.success) {
         res.json(result);
     } else {
         res.status(400).json(result);
     }
+});
+
+/**
+ * POST /register-node
+ * Đăng ký một node mới vào mạng P2P
+ */
+app.post('/register-node', (req, res) => {
+    const { nodeUrl } = req.body;
+    const currentNodeUrl = `http://localhost:${PORT}`;
+
+    if (nodeUrl && !networkNodes.includes(nodeUrl) && nodeUrl !== currentNodeUrl) {
+        networkNodes.push(nodeUrl);
+        res.json({
+            success: true,
+            message: `✅ Đã đăng ký node: ${nodeUrl}`,
+            nodes: networkNodes
+        });
+    } else {
+        res.status(400).json({
+            success: false,
+            message: "❌ Node không hợp lệ hoặc đã tồn tại"
+        });
+    }
+});
+
+/**
+ * GET /resolve-conflicts
+ * Cơ chế đồng thuận: Tìm chuỗi dài nhất và hợp lệ nhất trong mạng
+ */
+app.get('/resolve-conflicts', async (req, res) => {
+    let longestChain = null;
+    let maxLength = myBlockchain.chain.length;
+
+    try {
+        const promises = networkNodes.map(node => axios.get(`${node}/chain`));
+        const responses = await Promise.all(promises);
+
+        for (const response of responses) {
+            const remoteChain = response.data.chain;
+            const remoteLength = response.data.length;
+
+            if (remoteLength > maxLength) {
+                // Giả lập instance blockchain để kiểm tra remoteChain
+                const tempBlockchain = new Blockchain();
+                tempBlockchain.chain = remoteChain;
+
+                if (tempBlockchain.isChainValid().valid) {
+                    maxLength = remoteLength;
+                    longestChain = remoteChain;
+                }
+            }
+        }
+
+        if (longestChain) {
+            myBlockchain.chain = longestChain;
+            myBlockchain.pendingTransactions = [];
+            return res.json({
+                success: true,
+                message: "✅ Đã cập nhật chuỗi mới dài hơn từ mạng!",
+                newLength: myBlockchain.chain.length
+            });
+        }
+
+        res.json({
+            success: true,
+            message: "✅ Chuỗi hiện tại đã là dài nhất và hợp lệ.",
+            length: myBlockchain.chain.length
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "❌ Lỗi khi thực hiện đồng thuận: " + error.message
+        });
+    }
+});
+
+app.get('/balance/:address', (req, res) => {
+    const address = req.params.address;
+    const balance = myBlockchain.getBalanceOfAddress(address);
+
+    res.json({
+        success: true,
+        address: address,
+        balance: balance
+    });
 });
 
 /**

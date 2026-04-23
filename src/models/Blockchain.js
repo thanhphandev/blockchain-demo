@@ -13,6 +13,7 @@
  */
 
 const Block = require('./Block');
+const Transaction = require('./Transaction');
 
 /**
  * Class Blockchain - Quản lý toàn bộ chuỗi khối
@@ -49,7 +50,7 @@ class Blockchain {
         return new Block(
             0,                                          // Index = 0
             new Date().toISOString(),                   // Thời gian hiện tại
-            { message: "Genesis Block - Khối Khởi Nguyên" },  // Dữ liệu
+            [],                                         // Giao dịch rỗng cho Genesis Block
             "0"                                         // Không có previousHash
         );
     }
@@ -69,19 +70,37 @@ class Blockchain {
     /**
      * addTransaction() - Thêm giao dịch vào Mempool (hàng đợi)
      * 
-     * Trong thực tế, các giao dịch không được xử lý ngay lập tức.
-     * Chúng được đưa vào "Mempool" - hàng đợi chờ thợ đào đóng gói.
-     * 
      * @param {Object} transaction - Dữ liệu giao dịch
      */
     addTransaction(transaction) {
-        // Thêm timestamp vào giao dịch
-        const txWithTimestamp = {
-            ...transaction,
-            timestamp: new Date().toISOString()
-        };
-        this.pendingTransactions.push(txWithTimestamp);
-        console.log(`📝 Giao dịch đã được thêm vào Mempool. Tổng: ${this.pendingTransactions.length} giao dịch đang chờ.`);
+        if (!transaction.fromAddress || !transaction.toAddress) {
+            throw new Error('❌ Giao dịch phải có địa chỉ người gửi và người nhận!');
+        }
+
+        // 1. Xác minh chữ ký số
+        if (!transaction.isValid()) {
+            throw new Error('❌ Chữ ký giao dịch không hợp lệ!');
+        }
+
+        if (transaction.amount <= 0) {
+            throw new Error('❌ Số lượng chuyển phải lớn hơn 0!');
+        }
+
+        // 2. KIỂM TRA SỐ DƯ (Ngăn chặn Double Spending)
+        // Số dư khả dụng thực tế = Số dư trên chuỗi - Tổng tiền đang đợi trong Mempool
+        const balanceOnChain = this.getBalanceOfAddress(transaction.fromAddress);
+        const pendingAmount = this.pendingTransactions
+            .filter(tx => tx.fromAddress === transaction.fromAddress)
+            .reduce((sum, tx) => sum + tx.amount, 0);
+
+        const availableBalance = balanceOnChain - pendingAmount;
+
+        if (availableBalance < transaction.amount) {
+            throw new Error(`❌ Lỗi: Double Spending! Số dư khả dụng không đủ (Ví có: ${balanceOnChain} MBC, Đang đợi trong Mempool: ${pendingAmount} MBC, Yêu cầu thêm: ${transaction.amount} MBC)`);
+        }
+
+        this.pendingTransactions.push(transaction);
+        console.log(`📝 Giao dịch hợp lệ đã được thêm vào Mempool. Tổng: ${this.pendingTransactions.length} đang chờ.`);
     }
 
     /**
@@ -96,22 +115,17 @@ class Blockchain {
      * 
      * @returns {Block} Block vừa được đào
      */
-    minePendingTransactions() {
-        // Kiểm tra có giao dịch nào không
-        if (this.pendingTransactions.length === 0) {
-            // Nếu Mempool trống, tạo một giao dịch mặc định
-            this.pendingTransactions.push({
-                data: "Block rỗng - Không có giao dịch",
-                timestamp: new Date().toISOString()
-            });
-        }
+    minePendingTransactions(miningRewardAddress) {
+        // Tạo giao dịch phần thưởng cho thợ đào
+        const rewardTx = new Transaction(null, miningRewardAddress, 12.5);
+        this.pendingTransactions.push(rewardTx);
 
-        // Tạo block mới
+        // Tạo block mới chứa tất cả giao dịch đang chờ
         const block = new Block(
-            this.chain.length,                      // Index = độ dài chuỗi hiện tại
-            new Date().toISOString(),               // Thời gian hiện tại
-            this.pendingTransactions,               // Tất cả giao dịch đang chờ
-            this.getLatestBlock().hash              // Hash của block trước
+            this.chain.length,
+            new Date().toISOString(),
+            this.pendingTransactions,
+            this.getLatestBlock().hash
         );
 
         console.log(`\n🔨 Bắt đầu đào Block #${block.index}...`);
@@ -266,7 +280,14 @@ class Blockchain {
         const oldData = JSON.stringify(this.chain[index].transactions);
 
         // SỬA ĐỔI dữ liệu (mô phỏng tấn công)
-        this.chain[index].transactions = newData;
+        // Chúng ta đưa dữ liệu giả mạo vào một transaction mới để giữ cấu trúc mảng []
+        this.chain[index].transactions = [{
+            fromAddress: "Hacker",
+            toAddress: "Malicious",
+            amount: 999999,
+            data: newData, // Lưu chuỗi giả mạo vào trường data
+            timestamp: Date.now()
+        }];
 
         // KHÔNG tính lại hash - đây là điểm mấu chốt của demo
         // Trong thực tế, hacker sẽ cố gắng sửa dữ liệu mà không đào lại
@@ -282,6 +303,36 @@ class Blockchain {
             message: `🔓 Block #${index} đã bị sửa đổi thành công!`,
             tamperedBlock: this.chain[index]
         };
+    }
+
+    /**
+     * getBalanceOfAddress() - Tính số dư của một địa chỉ ví
+     * 
+     * Duyệt qua toàn bộ chuỗi khối để tính toán số dư.
+     * Số dư = (Tổng nhận) - (Tổng gửi)
+     * 
+     * @param {string} address - Địa chỉ ví cần kiểm tra
+     * @returns {number} Số dư
+     */
+    getBalanceOfAddress(address) {
+        let balance = 0;
+
+        for (const block of this.chain) {
+            // Đảm bảo block.transactions là mảng trước khi lặp
+            if (Array.isArray(block.transactions)) {
+                for (const trans of block.transactions) {
+                    if (trans.fromAddress === address) {
+                        balance -= trans.amount;
+                    }
+
+                    if (trans.toAddress === address) {
+                        balance += trans.amount;
+                    }
+                }
+            }
+        }
+
+        return balance;
     }
 
     /**

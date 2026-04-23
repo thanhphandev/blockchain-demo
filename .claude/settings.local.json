@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node \"E:/Do an nhom/blockchain/src/server.js\")"
+    ]
+  }
+}

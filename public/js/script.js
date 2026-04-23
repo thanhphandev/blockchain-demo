@@ -376,7 +376,7 @@ const createBlockCard = (block, idx) => {
         <!-- Block Header -->
         <div class="block-header">
             <span class="block-index">
-                ${block.index === 0 ? '🌱 Genesis' : `⛓️ Block #${block.index}`}
+                ${block.index === 0 ? 'Genesis' : `Block #${block.index}`}
             </span>
             <span class="block-time">${time}</span>
         </div>
@@ -385,7 +385,7 @@ const createBlockCard = (block, idx) => {
         <div class="block-body">
             <!-- Data -->
             <div class="block-field">
-                <div class="block-field-label">📦 Data (Transactions)</div>
+                <div class="block-field-label">Data (Transactions)</div>
                 <div class="block-field-value data">${escapeHtml(txData)}</div>
             </div>
             
