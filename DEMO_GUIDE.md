@@ -104,3 +104,14 @@ Hệ thống này không chỉ là mã nguồn, nó là mô hình thu nhỏ củ
 
 ---
 *Biên soạn bởi Antigravity cho Đồ án Mini Blockchain v3.0*
+### 6. 🤖 Điều Khiển Bằng AI Agent (Mới)
+Hệ thống hiện đã tích hợp **Page Agent**, cho phép bạn điều khiển Blockchain Explorer bằng ngôn ngữ tự nhiên:
+1. Nhấp vào biểu tượng robot ở góc màn hình.
+2. Nhập lệnh bằng tiếng Việt hoặc tiếng Anh, ví dụ:
+   - *"Gửi 10 MBC cho địa chỉ [Dán địa chỉ vào]"*
+   - *"Thực hiện đào block mới"*
+   - *"Kiểm tra tính toàn vẹn của chuỗi"*
+3. AI sẽ tự động thực hiện các thao tác click và nhập liệu cho bạn.
+
+---
+**Lưu ý:** Đây là phiên bản demo sử dụng API LLM miễn phí. Để sử dụng ổn định lâu dài, hãy thay thế `apiKey` trong file `index.html`.

@@ -91,16 +91,18 @@ class Blockchain {
         const balanceOnChain = this.getBalanceOfAddress(transaction.fromAddress);
         const pendingAmount = this.pendingTransactions
             .filter(tx => tx.fromAddress === transaction.fromAddress)
-            .reduce((sum, tx) => sum + tx.amount, 0);
+            .reduce((sum, tx) => sum + Number(tx.amount), 0);
 
         const availableBalance = balanceOnChain - pendingAmount;
 
+        // Kiểm tra lỗi Double Spending hoặc số dư không đủ
         if (availableBalance < transaction.amount) {
             throw new Error(`❌ Lỗi: Double Spending! Số dư khả dụng không đủ (Ví có: ${balanceOnChain} MBC, Đang đợi trong Mempool: ${pendingAmount} MBC, Yêu cầu thêm: ${transaction.amount} MBC)`);
         }
 
         this.pendingTransactions.push(transaction);
         console.log(`📝 Giao dịch hợp lệ đã được thêm vào Mempool. Tổng: ${this.pendingTransactions.length} đang chờ.`);
+        return true; // Trả về true để thông báo thành công
     }
 
     /**
@@ -362,11 +364,11 @@ class Blockchain {
             if (Array.isArray(block.transactions)) {
                 for (const trans of block.transactions) {
                     if (trans.fromAddress === address) {
-                        balance -= trans.amount;
+                        balance -= Number(trans.amount);
                     }
 
                     if (trans.toAddress === address) {
-                        balance += trans.amount;
+                        balance += Number(trans.amount);
                     }
                 }
             }

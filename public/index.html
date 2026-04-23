@@ -218,5 +218,25 @@
 
     <!-- Scripts -->
     <script type="module" src="js/app.js"></script>
+
+    <!-- Page Agent Integration -->
+    <script src="https://cdn.jsdelivr.net/npm/page-agent@1.8.0/dist/iife/page-agent.demo.js" crossorigin="true"></script>
+    <script>
+        // Khởi tạo Page Agent khi trang tải xong
+        window.addEventListener('load', () => {
+            if (window.PageAgent) {
+                const agent = new window.PageAgent({
+                    model: 'cx/gpt-5.4',
+                    baseURL: 'http://localhost:20128/v1',
+                    apiKey: 'sk-692d436dc1b857e4-9bvu9t-e40d5562',
+                    language: 'vi-VN'
+                });
+                
+                // Hiển thị bảng điều khiển AI
+                agent.panel.show();
+                console.log('🤖 Page Agent đã sẵn sàng!');
+            }
+        });
+    </script>
 </body>
 </html>

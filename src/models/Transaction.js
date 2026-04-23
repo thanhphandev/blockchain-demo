@@ -24,7 +24,7 @@ class Transaction {
     constructor(fromAddress, toAddress, amount, timestamp) {
         this.fromAddress = fromAddress;
         this.toAddress = toAddress;
-        this.amount = amount;
+        this.amount = Number(amount); // Ép kiểu Number để tránh lỗi cộng chuỗi
         this.timestamp = timestamp || Date.now();
         this.signature = ''; // Chữ ký sẽ được thêm sau khi ký
     }

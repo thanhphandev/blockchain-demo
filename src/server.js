@@ -75,6 +75,7 @@ const handleMessage = (ws, message) => {
                 // Nếu có trường data bổ sung
                 if (tx.data) newTx.data = tx.data;
 
+                // addTransaction sẽ ném lỗi nếu không hợp lệ (bao gồm Double Spending)
                 if (myBlockchain.addTransaction(newTx)) {
                     console.log('📩 Nhận giao dịch mới qua P2P.');
                 }
