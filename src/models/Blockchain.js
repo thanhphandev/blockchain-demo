@@ -185,20 +185,32 @@ class Blockchain {
      * 
      * @returns {Object} { valid: boolean, message: string, invalidBlockIndex: number|null }
      */
-    isChainValid() {
+    isChainValid(chainToValidate = this.chain) {
         // Tạo chuỗi target để kiểm tra PoW
         const target = Array(this.difficulty + 1).join("0");
 
         // Duyệt từ block thứ 1 (bỏ qua Genesis Block)
-        for (let i = 1; i < this.chain.length; i++) {
-            const currentBlock = this.chain[i];
-            const previousBlock = this.chain[i - 1];
+        for (let i = 1; i < chainToValidate.length; i++) {
+            let currentBlock = chainToValidate[i];
+            const previousBlock = chainToValidate[i - 1];
+
+            // console.log(`🔍 Đang kiểm tra Block #${i}...`);
+
+            // Đảm bảo block là một instance của lớp Block để có các phương thức cần thiết
+            if (typeof currentBlock.calculateHash !== 'function') {
+                currentBlock = new Block(
+                    currentBlock.index,
+                    currentBlock.timestamp,
+                    currentBlock.transactions,
+                    currentBlock.previousHash,
+                    currentBlock.nonce,
+                    currentBlock.hash
+                );
+            }
 
             // ========================================
             // KIỂM TRA 1: Hash có khớp với dữ liệu không?
             // ========================================
-            // Tính lại hash từ dữ liệu hiện tại của block
-            // Nếu ai đó sửa đổi transactions, hash sẽ không khớp
             if (currentBlock.hash !== currentBlock.calculateHash()) {
                 return {
                     valid: false,
@@ -210,8 +222,6 @@ class Blockchain {
             // ========================================
             // KIỂM TRA 2: Liên kết với block trước có nguyên vẹn?
             // ========================================
-            // previousHash của block hiện tại phải bằng hash của block trước
-            // Nếu không khớp, chuỗi đã bị phá vỡ
             if (currentBlock.previousHash !== previousBlock.hash) {
                 return {
                     valid: false,
@@ -240,6 +250,36 @@ class Blockchain {
             message: "✅ Blockchain hoàn toàn hợp lệ! Tất cả các block đều nguyên vẹn.",
             invalidBlockIndex: null
         };
+    }
+
+    /**
+     * replaceChain() - Thay thế chuỗi hiện tại bằng chuỗi mới (Đồng bộ P2P)
+     * 
+     * @param {Array} newChain - Chuỗi mới nhận được từ mạng
+     * @returns {boolean} Kết quả thay thế
+     */
+    replaceChain(newChain) {
+        if (newChain.length <= this.chain.length) {
+            // Im lặng hoặc log nhẹ nếu chuỗi ngắn hơn
+            return false;
+        }
+
+        console.log(`⛓️  Đang kiểm tra chuỗi mới (Độ dài: ${newChain.length})...`);
+        const validation = this.isChainValid(newChain);
+        if (!validation.valid) {
+            console.log(`❌ Chuỗi mới không hợp lệ: ${validation.message}`);
+            return false;
+        }
+
+        // Hydrate: Chuyển đổi POJO sang class instances
+        this.chain = newChain.map(b => {
+            if (typeof b.calculateHash === 'function') return b;
+            return new Block(b.index, b.timestamp, b.transactions, b.previousHash, b.nonce, b.hash);
+        });
+
+        this.pendingTransactions = [];
+        console.log(`✅ Chấp nhận chuỗi mới. Độ dài hiện tại: ${this.chain.length}`);
+        return true;
     }
 
     /**

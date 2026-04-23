@@ -32,13 +32,13 @@ class Block {
      * @param {Array|Object} transactions - Dữ liệu giao dịch
      * @param {string} previousHash - Hash của block trước đó
      */
-    constructor(index, timestamp, transactions, previousHash = '') {
+    constructor(index, timestamp, transactions, previousHash = '', nonce = 0, hash = '') {
         this.index = index;                    // Số thứ tự block
         this.timestamp = timestamp;            // Thời gian tạo
         this.transactions = transactions;      // Dữ liệu giao dịch
         this.previousHash = previousHash;      // Hash của block trước
-        this.nonce = 0;                        // Số dùng cho Proof of Work
-        this.hash = this.calculateHash();      // Hash của block này
+        this.nonce = nonce;                    // Số dùng cho Proof of Work (mặc định 0)
+        this.hash = hash || this.calculateHash(); // Hash của block này
     }
 
     /**

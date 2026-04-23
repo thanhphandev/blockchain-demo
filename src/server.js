@@ -20,6 +20,7 @@ const axios = require('axios');
 const WebSocket = require('ws');
 const Blockchain = require('./models/Blockchain');
 const Transaction = require('./models/Transaction');
+const Block = require('./models/Block');
 
 // ============================================
 // KHỞI TẠO SERVER VÀ BLOCKCHAIN
@@ -67,11 +68,19 @@ const handleMessage = (ws, message) => {
         case 'NEW_TRANSACTION':
             try {
                 const tx = message.data;
-                const newTx = new Transaction(tx.fromAddress, tx.toAddress, tx.amount, tx.data, tx.timestamp, tx.signature);
+                // Khởi tạo lại Transaction để có các phương thức cần thiết (như isValid)
+                const newTx = new Transaction(tx.fromAddress, tx.toAddress, tx.amount, tx.timestamp);
+                newTx.signature = tx.signature;
+                
+                // Nếu có trường data bổ sung
+                if (tx.data) newTx.data = tx.data;
+
                 if (myBlockchain.addTransaction(newTx)) {
                     console.log('📩 Nhận giao dịch mới qua P2P.');
                 }
-            } catch (err) {}
+            } catch (err) {
+                console.error('❌ Lỗi khi xử lý giao dịch P2P:', err.message);
+            }
             break;
         case 'NEW_BLOCK':
             console.log('📦 Nhận thông báo có Block mới! Đang đồng bộ...');
@@ -119,9 +128,7 @@ const connectToNodes = (newNodes) => {
 };
 
 const handleChainResponse = (receivedChain) => {
-    if (receivedChain.length > myBlockchain.chain.length && myBlockchain.isChainValid(receivedChain).valid) {
-        myBlockchain.chain = receivedChain;
-        myBlockchain.pendingTransactions = [];
+    if (myBlockchain.replaceChain(receivedChain)) {
         broadcast({ type: 'CHAIN_UPDATED', data: myBlockchain.chain });
         console.log('✅ Chuỗi đã được cập nhật từ node khác.');
     }
@@ -132,18 +139,29 @@ const resolveConflictsInternal = async () => {
     let longestChain = null;
     for (const node of networkNodes) {
         try {
+            console.log(`📡 Đang kiểm tra chuỗi từ node: ${node}`);
             const response = await axios.get(`${node}/chain`);
             const remoteChain = response.data.chain;
-            if (remoteChain.length > maxLength && myBlockchain.isChainValid(remoteChain).valid) {
-                maxLength = remoteChain.length;
-                longestChain = remoteChain;
+            const remoteLength = response.data.length;
+            
+            if (remoteLength > maxLength) {
+                console.log(`   发现 chuỗi dài hơn (${remoteLength} > ${maxLength}). Đang xác thực...`);
+                if (myBlockchain.isChainValid(remoteChain).valid) {
+                    maxLength = remoteLength;
+                    longestChain = remoteChain;
+                } else {
+                    console.log(`   ❌ Chuỗi từ ${node} không hợp lệ!`);
+                }
             }
-        } catch (err) {}
+        } catch (err) {
+            console.log(`   ⚠️ Không thể kết nối tới ${node}: ${err.message}`);
+        }
     }
     if (longestChain) {
-        myBlockchain.chain = longestChain;
-        myBlockchain.pendingTransactions = [];
-        broadcast({ type: 'CHAIN_UPDATED', data: myBlockchain.chain });
+        if (myBlockchain.replaceChain(longestChain)) {
+            broadcast({ type: 'CHAIN_UPDATED', data: myBlockchain.chain });
+            console.log('✅ Đã đồng bộ thành công chuỗi dài nhất từ mạng lưới.');
+        }
     }
 };
 // ============================================
