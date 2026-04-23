@@ -1,95 +1,105 @@
-# 🔗 Hướng Dẫn Demo Hệ Thống Mini Blockchain - Phiên Bản Chuyên Nghiệp
+# 🌐 Hướng Dẫn Vận Hành Hệ Thống Mini Blockchain v3.0 (Production-Grade)
 
-Chào mừng bạn đến với chương trình mô phỏng **Mini Blockchain**. Tài liệu này được thiết kế để trình bày các khái niệm cốt lõi của công nghệ blockchain thông qua một giao diện tương tác trực quan, sinh động và đảm bảo tính chính xác về mặt kỹ thuật.
-
----
-
-## 📋 Yêu Cầu Hệ Thống & Thiết Lập
-
-Trước khi bắt đầu, hãy đảm bảo các node (nút mạng) đang hoạt động để có thể trình diễn tính năng P2P (mạng ngang hàng).
-
-1.  **Khởi Chạy Mạng Lưới Đa Nút**:
-    ```bash
-    npm run network
-    ```
-    *Lệnh này sẽ khởi chạy 3 node tại các cổng **3000**, **3001**, và **3002**.*
-
-2.  **Truy Cập Dashboard**:
-    - Node 1 (Chính): [http://localhost:3000](http://localhost:3000)
-    - Node 2: [http://localhost:3001](http://localhost:3001)
-    - Node 3: [http://localhost:3002](http://localhost:3002)
+Tài liệu này hướng dẫn chi tiết cách trình diễn hệ thống **Mini Blockchain** với kiến trúc mạng ngang hàng (P2P) dựa trên **WebSockets**, cơ chế xác thực chữ ký số **ECDSA**, và thuật toán đồng thuận **Proof of Work**.
 
 ---
 
-## 🧪 Giai Đoạn 1: Mật Mã Học & Định Danh
-*Mục tiêu: Trình diễn cách người dùng được định danh mà không cần username/password.*
+## 🛠️ 1. Chuẩn Bị & Khởi Chạy
+Hệ thống yêu cầu Node.js và các phụ thuộc đã được cài đặt (`npm install`).
 
-1.  **Khởi Tạo Danh Tính**: Trên thanh điều hướng (sidebar), nhấn **"Tạo Ví Mới" (New Wallet)**.
-2.  **Quan Sát**: 
-    - Chú ý **Public Key** (Địa chỉ ví của bạn). Trong blockchain, địa chỉ này chính là danh tính của bạn.
-    - Nhấn **"Xuất Private Key"**. Hãy giải thích rằng đây là "Chìa Khóa Vạn Năng" dùng để ký xác thực giao dịch. Nếu mất khóa này, tài sản sẽ mất vĩnh viễn.
-3.  **Kiểm Tra Số Dư**: Số dư ban đầu là 0 MBC. Giải thích rằng tiền ảo chỉ được tạo ra thông qua **Phần Thưởng Khai Thác (Mining Rewards)**.
-
----
-
-## 📥 Giai Đoạn 2: Mempool & Giao Dịch
-*Mục tiêu: Hiểu cách giao dịch được tạo ra và chờ đợi để được xác nhận.*
-
-1.  **Tạo Giao Dịch**: Sử dụng biểu mẫu "Gửi Giao Dịch".
-    - **Người Nhận**: Dán địa chỉ ví khác (hoặc sử dụng địa chỉ mẫu).
-    - **Số Lượng**: Nhập `50`.
-2.  **Quy Trình Ký Số**: Nhấn **"Gửi Giao Dịch"**.
-    - **Lưu ý kỹ thuật**: Hệ thống sử dụng thuật toán **ECDSA (secp256k1)** để ký dữ liệu. Chỉ chủ sở hữu Private Key mới có quyền chuyển tài sản.
-3.  **Theo Dõi Mempool**: Quan sát mục **"Giao Dịch Đang Chờ (Mempool)"**.
-    - Giải thích rằng giao dịch hiện ở trạng thái "Chưa xác nhận" (Unconfirmed). Nó hợp lệ nhưng chưa được ghi vào sổ cái bất biến.
+### Khởi chạy mạng lưới 3 nút (Nodes):
+Mở terminal và chạy lệnh:
+```bash
+npm run network
+```
+*Lệnh này tự động kích hoạt 3 instance server độc lập:*
+- **Node 1**: [http://localhost:3000](http://localhost:3000) (P2P Port: 4000)
+- **Node 2**: [http://localhost:3001](http://localhost:3001) (P2P Port: 4001)
+- **Node 3**: [http://localhost:3002](http://localhost:3002) (P2P Port: 4002)
 
 ---
 
-## ⛏️ Giai Đoạn 3: Đào Block & Proof of Work
-*Mục tiêu: Trình diễn cơ chế bảo mật mạng lưới.*
+## 🧪 2. Kịch Bản Trình Diễn (6 Giai Đoạn)
 
-1.  **Bắt Đầu Khai Thác**: Nhấn **"Khai Thác Giao Dịch Đang Chờ" (Mine)**.
-2.  **Phản Hồi Trực Quan**: Trạng thái hệ thống sẽ chuyển sang **"Đang Đào..." (Mining...)**.
-3.  **Kết Quả**: 
-    - Một **Block (Khối)** mới xuất hiện trong Sổ cái (Ledger).
-    - Kiểm tra giá trị **Nonce**. Giải thích rằng thợ đào phải thử hàng triệu con số để tìm ra mã Hash bắt đầu bằng các số 0 theo yêu cầu (Độ khó - Difficulty).
-4.  **Phần Thưởng**: Số dư của bạn sẽ tăng thêm **12.5 MBC** (Phần thưởng đào block).
+### Giai Đoạn 1: Thiết Lập Danh Tính (Identity & Keys)
+*Mục tiêu: Hiểu về ví tiền và tính ẩn danh.*
+1.  Truy cập **Node 1**. Nhấn **"Tạo Ví Mới"**.
+2.  **Giải thích**: 
+    - **Public Key**: Là địa chỉ nhận tiền (giống số tài khoản ngân hàng).
+    - **Private Key**: Là "chữ ký" tối mật. Trong Blockchain, "Bạn sở hữu Private Key nghĩa là bạn sở hữu tài sản".
+3.  Lưu lại Public Key của Node 1 để nhận tiền.
+
+### Giai Đoạn 2: Giao Dịch Thời Gian Thực (Mempool & WebSockets)
+*Mục tiêu: Thấy được sự lan tỏa thông tin tức thời.*
+1.  Mở song song 2 trình duyệt cho **Node 1** và **Node 2**.
+2.  Tại **Node 1**, thực hiện gửi tiền tới **Node 2**.
+3.  **Quan sát**: Ngay khi nhấn "Ký & Gửi", phần **"Giao Dịch Đang Chờ (Mempool)"** ở cả 2 cửa sổ sẽ cập nhật cùng lúc.
+4.  **Kỹ thuật**: Thông tin được truyền qua WebSocket ngay lập tức (không có độ trễ Polling).
+
+### Giai Đoạn 3: Đào Khối & Proof of Work (Mining)
+*Mục tiêu: Hiểu cách dữ liệu được đóng gói vào sổ cái.*
+1.  Tại **Node 2**, nhấn **"Khai Thác Giao Dịch"**.
+2.  **Quan sát**: Dashboard của **Node 1** cũng sẽ tự động xuất hiện Block mới mà không cần tải lại trang.
+3.  **Giải thích**:
+    - **Nonce**: Con số may mắn mà thợ đào phải tìm.
+    - **Difficulty**: Độ khó càng cao, thợ đào càng mất nhiều thời gian để tìm mã Hash hợp lệ.
+    - **Reward**: Node đào thành công sẽ nhận được 12.5 MBC.
+
+### Giai Đoạn 4: Ngăn Chặn Chi Tiêu Kép (Double Spending Protection)
+*Mục tiêu: Chứng minh tính an toàn của hệ thống tài chính.*
+1.  Giả sử bạn có 100 MBC. Hãy tạo 2 giao dịch mỗi cái 60 MBC.
+2.  **Kết quả**: Hệ thống sẽ chặn giao dịch thứ 2 ngay tại Frontend/Backend vì: `Số dư hiện tại - Tiền đang đợi trong Mempool < Số tiền gửi`.
+3.  **Kỹ thuật**: Đây là cơ chế **Mempool-aware balance validation** cao cấp, đảm bảo người dùng không thể "gian lận" bằng cách gửi cùng một số tiền cho 2 người khác nhau trong khi đợi xác nhận.
+
+### Giai Đoạn 5: Sự Đồng Thuận & Chuỗi Dài Nhất (Consensus)
+*Mục tiêu: Hiểu cách mạng lưới giải quyết mâu thuẫn.*
+1.  Ngắt kết nối mạng (hoặc giả lập bằng cách đào riêng lẻ).
+2.  Cho **Node 1** đào thêm 3 block.
+3.  Cho **Node 2** đào thêm 1 block.
+4.  Khi hai node kết nối lại: Nhấn **"Đồng Bộ"**.
+5.  **Kết quả**: **Node 2** sẽ tự động hủy bỏ 1 block của mình và tải về 3 block từ **Node 1**.
+6.  **Nguyên tắc**: "The longest chain is the truth" (Chuỗi dài nhất là sự thật).
+
+### Giai Đoạn 6: Tính Bất Biến & Tấn Công Giả Mạo (Immutability)
+*Mục tiêu: Thấy được sức mạnh của mã hóa Hash.*
+1.  Tại bất kỳ node nào, tìm một Block cũ.
+2.  Nhấn biểu tượng **Tia chớp (⚡)** để sửa đổi dữ liệu khối.
+3.  **Hậu quả**: Toàn bộ các khối phía sau sẽ chuyển sang màu đỏ và hệ thống báo động **"Bị Xâm Phạm"**.
+4.  **Giải thích**: Vì mã Hash của khối sau phụ thuộc vào khối trước, việc sửa đổi 1 ký tự sẽ phá vỡ toàn bộ "sợi xích" liên kết.
 
 ---
 
-## 🛡️ Giai Đoạn 4: Tính Toàn Vẹn & Giả Lập Tấn Công
-*Mục tiêu: Chứng minh tại sao Blockchain được gọi là "Bất Biến" (Immutable).*
+## 🔎 3. Kiểm Tra & Phát Hiện Lỗi (Testing & Debugging)
 
-1.  **Kiểm Tra Sức Khỏe**: Xác nhận biểu tượng **"Hệ Thống Ổn Định" (System Healthy)**.
-2.  **Tấn Công Chuỗi**: 
-    - Tìm một khối đã xác nhận trong sổ cái.
-    - Nhấn vào biểu tượng **Tia Chớp (⚡)** trên khối đó để sửa đổi dữ liệu.
-3.  **Hiệu Ứng Gây Chuyền**:
-    - Khối bị tấn công sẽ chuyển sang màu **ĐỎ**.
-    - Tất cả các khối phía sau cũng chuyển sang màu **ĐỎ** vì `previousHash` của chúng không còn khớp với khối trước đó.
-4.  **Phản Ứng Hệ Thống**: Thông báo cảnh báo **"Vi Phạm Tính Toàn Vẹn Dữ Liệu"** sẽ xuất hiện.
-    - **Bài học**: Vì mỗi khối được liên kết chặt chẽ với khối trước đó qua mã Hash, việc thay đổi dù chỉ 1 bit dữ liệu cũng sẽ bị toàn bộ mạng lưới phát hiện ngay lập tức.
+Khi vận hành, hãy chú ý các dấu hiệu sau để đảm bảo hệ thống hoạt động 100%:
 
----
+### ✅ Dấu hiệu Hoạt động Tốt:
+- **Terminal**: Xuất hiện dòng `📡 P2P Server: Connection established` khi các node kết nối.
+- **Frontend**: Dashboard hiển thị "Hệ Thống Ổn Định" (Màu xanh).
+- **Real-time**: Gửi tiền ở Node này, Node kia hiện Mempool ngay (dưới 100ms).
 
-## 🌐 Giai Đoạn 5: Mạng P2P & Sự Đồng Thuận
-*Mục tiêu: Cho thấy cách nhiều node cùng thống nhất về một "Sự Thật".*
-
-1.  **Kết Nối Peer**: Tại [localhost:3000], nhập `http://localhost:3001` vào phần P2P và nhấn **"Kết Nối Node"**.
-2.  **Mô Phỏng Xung Đột**:
-    - Tại **Node 1**, đào thêm 2 block mới.
-    - Tại **Node 2**, giữ nguyên. Lúc này chuỗi của Node 2 ngắn hơn.
-3.  **Giải Quyết Xung Đột**: Tại **Node 2**, nhấn **"Đồng Bộ Với Mạng Lưới"**.
-4.  **Kết Quả Đồng Thuận**: Node 2 sẽ phát hiện Node 1 có chuỗi dài hơn và tự động tải về lịch sử của Node 1.
-    - **Bài học**: "Chuỗi dài nhất là Sự thật." Đây là cốt lõi của **Đồng Thuận Phi Tập Trung (Decentralized Consensus)**.
+### ❌ Dấu hiệu Có Lỗi & Cách Xử Lý:
+1.  **Mất đồng bộ (Desync)**:
+    - *Dấu hiệu*: Block ở Node 1 khác hoàn toàn Node 2.
+    - *Xử lý*: Nhấn nút **"Đồng Bộ Với Mạng Lưới" (Resolve Conflicts)**.
+2.  **Lỗi WebSocket (Socket Error)**:
+    - *Dấu hiệu*: Nhấn Gửi tiền nhưng node khác không nhận được.
+    - *Nguyên nhân*: Port 4000/4001/4002 bị chiếm dụng bởi ứng dụng khác.
+    - *Kiểm tra*: Mở Console (F12) xem có báo lỗi `WebSocket connection failed` không.
+3.  **Từ Chối Chữ Ký (Signature Rejected)**:
+    - *Dấu hiệu*: Thông báo "Cannot add invalid transaction".
+    - *Nguyên nhân*: Bạn đang cố dùng Private Key của ví A để ký cho ví B.
+4.  **Lỗi Đào Khối (Mining Stall)**:
+    - *Dấu hiệu*: CPU chạy 100% nhưng không tìm thấy block.
+    - *Giải thích*: Có thể Difficulty đang để quá cao (mặc định là 2 hoặc 3 để demo mượt mà).
 
 ---
 
-## 🎓 Tổng Kết Kiến Thức
-- **Phi Tập Trung**: Không có máy chủ trung tâm nào kiểm soát sổ cái.
-- **Minh Bạch**: Mọi giao dịch đều được công khai và có thể kiểm chứng.
-- **Bất Biến**: Mã hóa Hash ngăn chặn việc sửa đổi lịch sử dữ liệu.
-- **Khan Hiếm**: Tiền ảo được tạo ra theo thuật toán cố định, không thể in thêm tùy tiện.
+## 🎓 4. Ý Nghĩa Thực Tiễn Của Hệ Thống
+Hệ thống này không chỉ là mã nguồn, nó là mô hình thu nhỏ của:
+- **Tài chính phi tập trung (DeFi)**: Không cần ngân hàng.
+- **Dữ liệu bất biến**: Ứng dụng trong truy xuất nguồn gốc, bầu cử điện tử.
+- **Tự động hóa niềm tin**: Tin vào thuật toán thay vì con người.
 
 ---
-*Biên soạn bởi Antigravity cho Mini Blockchain Simulation v2.0*
+*Biên soạn bởi Antigravity cho Đồ án Mini Blockchain v3.0*

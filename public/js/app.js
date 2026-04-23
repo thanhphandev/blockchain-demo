@@ -71,7 +71,37 @@ async function refreshWalletBalance() {
   const address = getPublicKey();
   if (!address) return;
   const result = await getBalance(address);
-  setWalletBalance(result.balance);
+  // balance: số dư đã xác nhận, pendingBalance: số dư sau khi trừ các giao dịch trong mempool
+  setWalletBalance(result.balance, result.pendingBalance);
+}
+
+function initWebSocket() {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  // WebSocket port = HTTP port + 1000
+  const wsPort = parseInt(window.location.port) + 1000;
+  const wsUrl = `${protocol}//${window.location.hostname}:${wsPort}`;
+  
+  console.log(`🔗 Đang kết nối tới WebSocket P2P: ${wsUrl}`);
+  const socket = new WebSocket(wsUrl);
+
+  socket.onmessage = (event) => {
+    const message = JSON.parse(event.data);
+    console.log('📡 Nhận tin nhắn P2P:', message.type);
+
+    switch (message.type) {
+      case 'NEW_TRANSACTION':
+      case 'NEW_BLOCK':
+      case 'CHAIN_UPDATED':
+        // Cập nhật giao diện ngay lập tức mà không cần F5
+        refreshData();
+        break;
+    }
+  };
+
+  socket.onclose = () => {
+    console.log('❌ Mất kết nối WebSocket. Đang thử lại sau 5 giây...');
+    setTimeout(initWebSocket, 5000);
+  };
 }
 
 async function refreshData(showValidationToast = false) {
@@ -262,6 +292,7 @@ async function bootstrap() {
   initWallet();
   setWalletAddress(getPublicKey());
   bindEvents();
+  initWebSocket(); // Khởi tạo P2P Real-time
 
   try {
     await refreshData();

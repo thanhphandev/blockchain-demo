@@ -17,6 +17,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const axios = require('axios');
+const WebSocket = require('ws');
 const Blockchain = require('./models/Blockchain');
 const Transaction = require('./models/Transaction');
 
@@ -26,13 +27,110 @@ const Transaction = require('./models/Transaction');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const WS_PORT = parseInt(PORT) + 1000;
 
 // Khởi tạo Blockchain instance
 const myBlockchain = new Blockchain();
 
-// Danh sách các node trong mạng P2P
-const networkNodes = [];
+// Danh sách các node trong mạng P2P và các kết nối socket
+const networkNodes = []; 
+const sockets = [];
 
+/**
+ * QUẢN LÝ WEBSOCKET P2P
+ */
+const initP2PServer = () => {
+    const server = new WebSocket.Server({ port: WS_PORT });
+    server.on('connection', (ws) => {
+        console.log(`📡 Kết nối P2P mới được thiết lập (Cổng ${WS_PORT}).`);
+        initConnection(ws);
+    });
+    console.log(`📡 P2P WebSocket Server đang chạy tại cổng: ${WS_PORT}`);
+};
+
+const initConnection = (ws) => {
+    sockets.push(ws);
+    ws.on('message', (data) => {
+        try {
+            const message = JSON.parse(data);
+            handleMessage(ws, message);
+        } catch (e) {}
+    });
+    ws.on('close', () => sockets.splice(sockets.indexOf(ws), 1));
+    ws.on('error', () => sockets.splice(sockets.indexOf(ws), 1));
+    
+    // Gửi yêu cầu đồng bộ ngay khi kết nối
+    write(ws, { type: 'REQUEST_CHAIN' });
+};
+
+const handleMessage = (ws, message) => {
+    switch (message.type) {
+        case 'NEW_TRANSACTION':
+            try {
+                const tx = message.data;
+                const newTx = new Transaction(tx.fromAddress, tx.toAddress, tx.amount, tx.data, tx.timestamp, tx.signature);
+                if (myBlockchain.addTransaction(newTx)) {
+                    console.log('📩 Nhận giao dịch mới qua P2P.');
+                }
+            } catch (err) {}
+            break;
+        case 'NEW_BLOCK':
+            console.log('📦 Nhận thông báo có Block mới! Đang đồng bộ...');
+            resolveConflictsInternal();
+            break;
+        case 'REQUEST_CHAIN':
+            write(ws, { type: 'RESPONSE_CHAIN', data: myBlockchain.chain });
+            break;
+        case 'RESPONSE_CHAIN':
+            handleChainResponse(message.data);
+            break;
+    }
+};
+
+const broadcast = (message) => sockets.forEach(socket => write(socket, message));
+const write = (ws, message) => ws.send(JSON.stringify(message));
+
+const connectToNodes = (newNodes) => {
+    newNodes.forEach(nodeUrl => {
+        try {
+            const url = new URL(nodeUrl);
+            const wsUrl = `ws://${url.hostname}:${parseInt(url.port) + 1000}`;
+            if (parseInt(url.port) === PORT) return;
+            const ws = new WebSocket(wsUrl);
+            ws.on('open', () => initConnection(ws));
+            ws.on('error', () => {});
+        } catch (err) {}
+    });
+};
+
+const handleChainResponse = (receivedChain) => {
+    if (receivedChain.length > myBlockchain.chain.length && myBlockchain.isChainValid(receivedChain).valid) {
+        myBlockchain.chain = receivedChain;
+        myBlockchain.pendingTransactions = [];
+        broadcast({ type: 'CHAIN_UPDATED', data: myBlockchain.chain });
+        console.log('✅ Chuỗi đã được cập nhật từ node khác.');
+    }
+};
+
+const resolveConflictsInternal = async () => {
+    let maxLength = myBlockchain.chain.length;
+    let longestChain = null;
+    for (const node of networkNodes) {
+        try {
+            const response = await axios.get(`${node}/chain`);
+            const remoteChain = response.data.chain;
+            if (remoteChain.length > maxLength && myBlockchain.isChainValid(remoteChain).valid) {
+                maxLength = remoteChain.length;
+                longestChain = remoteChain;
+            }
+        } catch (err) {}
+    }
+    if (longestChain) {
+        myBlockchain.chain = longestChain;
+        myBlockchain.pendingTransactions = [];
+        broadcast({ type: 'CHAIN_UPDATED', data: myBlockchain.chain });
+    }
+};
 // ============================================
 // MIDDLEWARE CONFIGURATION
 // ============================================
@@ -111,18 +209,15 @@ app.post('/add-transaction', async (req, res) => {
 
         myBlockchain.addTransaction(tx);
 
-        // LAN TỎA (BROADCAST) Giao dịch tới các node khác trong mạng
-        networkNodes.forEach(async (node) => {
-            try {
-                await axios.post(`${node}/receive-transaction`, req.body);
-            } catch (err) {
-                console.error(`❌ Không thể lan tỏa giao dịch tới ${node}`);
-            }
+        // LAN TỎA (BROADCAST) QUA WEBSOCKET P2P
+        broadcast({
+            type: 'NEW_TRANSACTION',
+            data: tx
         });
 
         res.json({
             success: true,
-            message: "✅ Giao dịch đã được thêm vào Mempool và lan tỏa tới mạng lưới!",
+            message: "✅ Giao dịch đã được thêm vào Mempool và lan tỏa toàn mạng (P2P)!",
             pendingCount: myBlockchain.pendingTransactions.length
         });
     } catch (error) {
@@ -204,13 +299,10 @@ app.get('/mine', async (req, res) => {
     // Thực hiện đào block
     const newBlock = myBlockchain.minePendingTransactions(minerAddress);
 
-    // THÔNG BÁO CHO MẠNG LƯỚI đồng bộ hóa
-    networkNodes.forEach(async (node) => {
-        try {
-            await axios.get(`${node}/resolve-conflicts`);
-        } catch (err) {
-            console.log(`Node ${node} không phản hồi thông báo đào block.`);
-        }
+    // THÔNG BÁO CHO MẠNG LƯỚI QUA WEBSOCKET (P2P)
+    broadcast({
+        type: 'NEW_BLOCK',
+        data: newBlock
     });
 
     res.json({
@@ -242,13 +334,10 @@ app.post('/mine', async (req, res) => {
     // Thực hiện đào block
     const newBlock = myBlockchain.minePendingTransactions(minerAddress);
 
-    // THÔNG BÁO CHO MẠNG LƯỚI đồng bộ hóa
-    networkNodes.forEach(async (node) => {
-        try {
-            await axios.get(`${node}/resolve-conflicts`);
-        } catch (err) {
-            console.log(`Node ${node} không phản hồi thông báo đào block.`);
-        }
+    // THÔNG BÁO CHO MẠNG LƯỚI QUA WEBSOCKET (P2P)
+    broadcast({
+        type: 'NEW_BLOCK',
+        data: newBlock
     });
 
     res.json({
@@ -331,9 +420,13 @@ app.post('/register-node', (req, res) => {
 
     if (nodeUrl && !networkNodes.includes(nodeUrl) && nodeUrl !== currentNodeUrl) {
         networkNodes.push(nodeUrl);
+        
+        // Kết nối P2P WebSocket
+        connectToNodes([nodeUrl]);
+
         res.json({
             success: true,
-            message: `✅ Đã đăng ký node: ${nodeUrl}`,
+            message: `✅ Đã đăng ký node HTTP và kết nối P2P WebSocket: ${nodeUrl}`,
             nodes: networkNodes
         });
     } else {
@@ -398,12 +491,19 @@ app.get('/resolve-conflicts', async (req, res) => {
 
 app.get('/balance/:address', (req, res) => {
     const address = req.params.address;
-    const balance = myBlockchain.getBalanceOfAddress(address);
+    const confirmedBalance = myBlockchain.getBalanceOfAddress(address);
+    
+    // Tính số dư đang chờ (tổng số tiền gửi đi trong Mempool)
+    const pendingAmount = myBlockchain.pendingTransactions
+        .filter(tx => tx.fromAddress === address)
+        .reduce((sum, tx) => sum + tx.amount, 0);
 
     res.json({
         success: true,
         address: address,
-        balance: balance
+        balance: confirmedBalance,
+        pendingBalance: confirmedBalance - pendingAmount,
+        inMempool: pendingAmount
     });
 });
 
@@ -451,27 +551,28 @@ app.post('/reset', (req, res) => {
 // ============================================
 
 app.listen(PORT, () => {
+    // Khởi tạo P2P WebSocket Server
+    initP2PServer();
+
     console.log(`
 ╔═══════════════════════════════════════════════════════════╗
 ║                                                           ║
-║   🔗 MINI BLOCKCHAIN SIMULATION                          ║
+║   🔗 MINI BLOCKCHAIN SIMULATION (P2P MODE)               ║
 ║   =======================================                ║
 ║                                                           ║
-║   Server đang chạy tại: http://localhost:${PORT}            ║
+║   HTTP Server: http://localhost:${PORT}                     ║
+║   P2P WebSocket: ws://localhost:${WS_PORT}                  ║
 ║                                                           ║
 ║   📚 API Endpoints:                                       ║
 ║   ─────────────────────────────────────────────           ║
 ║   GET  /chain            Xem toàn bộ blockchain           ║
 ║   GET  /difficulty       Xem độ khó hiện tại              ║
-║   POST /add-transaction  Thêm giao dịch vào Mempool       ║
+║   POST /add-transaction  Thêm giao dịch (P2P)             ║
 ║   GET  /pending          Xem giao dịch đang chờ           ║
 ║   GET  /mine             Đào block mới                    ║
-║   POST /mine             Đào block với data               ║
 ║   GET  /is-valid         Kiểm tra tính toàn vẹn           ║
-║   POST /tamper/:index    Giả lập tấn công                 ║
-║   POST /reset            Reset blockchain                 ║
 ║                                                           ║
-║   🌐 Mở trình duyệt để xem giao diện Demo                 ║
+║   🌐 Trạng thái: Mạng lưới WebSockets đang hoạt động      ║
 ║                                                           ║
 ╚═══════════════════════════════════════════════════════════╝
     `);

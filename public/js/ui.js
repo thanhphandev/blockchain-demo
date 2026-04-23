@@ -144,12 +144,23 @@ export function setWalletAddress(pubKey) {
     if (copy) copy.textContent = truncateMiddle(pubKey, 24);
 }
 
-export function setWalletBalance(balance) {
+export function setWalletBalance(balance, pendingBalance) {
     const el = document.getElementById('wallet-balance');
     if (el) el.textContent = Number(balance).toLocaleString('en-US', {
         minimumFractionDigits: 0,
         maximumFractionDigits: 8
     });
+
+    const pendingEl = document.getElementById('wallet-pending-balance');
+    if (pendingEl) {
+        const diff = balance - pendingBalance;
+        pendingEl.textContent = Number(diff).toLocaleString('en-US', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 8
+        });
+        // Ẩn nếu không có tiền đang chờ
+        pendingEl.parentElement.style.display = diff > 0 ? 'block' : 'none';
+    }
 }
 
 export function setChainValidity(isValid, invalidAtIndex) {
