@@ -139,32 +139,38 @@
                         </div>
                     </div>
 
-                    <!-- Node Controls Card -->
-                    <div class="card">
-                        <div class="card-header">
-                            <i data-lucide="cpu"></i>
-                            <h3>Điều Khiển Đào Coin</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="system-btns">
-                                <button id="btn-mine" class="btn btn-warning">
-                                    <i data-lucide="pickaxe"></i>
-                                    <span id="mine-btn-text">Khai Thác Giao Dịch Đang Chờ</span>
-                                    <span id="mine-hash-counter" style="display: none;"></span>
-                                </button>
-                                <button id="btn-validate" class="btn btn-success" style="margin-top: 0.75rem">
-                                    <i data-lucide="check-circle"></i> Kiểm Tra Tính Toàn Vẹn
-                                </button>
-                                <button id="btn-reset" class="btn btn-danger" style="margin-top: 0.75rem">
-                                    <i data-lucide="trash-2"></i> Khôi Phục Cài Đặt Gốc
-                                </button>
-                            </div>
-                        </div>
-                    </div>
                 </aside>
 
                 <!-- Right Column: Visualizer & Mempool -->
                 <section class="main-content">
+                    <!-- Node Controls Card -->
+                    <div class="card action-card">
+                        <div class="card-header">
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <i data-lucide="cpu"></i>
+                                <h3>Điều Khiển Hệ Thống</h3>
+                            </div>
+                            <div class="header-actions">
+                                <span class="badge" style="background: var(--bg-main); color: var(--text-muted); border: 1px solid var(--border-base);">Node Operator</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="action-grid">
+                                <button id="btn-mine" class="btn btn-warning">
+                                    <i data-lucide="pickaxe"></i>
+                                    <span id="mine-btn-text">Khai Thác Giao Dịch</span>
+                                    <span id="mine-hash-counter" style="display: none;"></span>
+                                </button>
+                                <button id="btn-validate" class="btn btn-success">
+                                    <i data-lucide="check-circle"></i> Kiểm Tra Toàn Vẹn
+                                </button>
+                                <button id="btn-reset" class="btn btn-danger">
+                                    <i data-lucide="trash-2"></i> Reset Sổ Cái
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Mempool Section -->
                     <div id="mempool-section">
                         <div class="section-header">

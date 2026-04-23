@@ -34,7 +34,7 @@ const WS_PORT = parseInt(PORT) + 1000;
 const myBlockchain = new Blockchain();
 
 // Danh sách các node trong mạng P2P và các kết nối socket
-const networkNodes = []; 
+const networkNodes = [];
 const sockets = [];
 
 /**
@@ -58,13 +58,13 @@ const initConnection = (ws) => {
         try {
             const message = JSON.parse(data);
             handleMessage(ws, message);
-        } catch (e) {}
+        } catch (e) { }
     });
 
     ws.on('close', () => {
         const index = sockets.indexOf(ws);
         if (index > -1) sockets.splice(index, 1);
-        
+
         // Tìm và xóa khỏi networkNodes nếu có nodeUrl gắn kèm
         const nodeUrl = ws.nodeUrl;
         if (nodeUrl) {
@@ -77,11 +77,11 @@ const initConnection = (ws) => {
         const index = sockets.indexOf(ws);
         if (index > -1) sockets.splice(index, 1);
     });
-    
+
     // 1. Gửi định danh (HTTP URL) của mình cho peer mới
-    write(ws, { 
-        type: 'HANDSHAKE', 
-        data: { nodeUrl: `http://localhost:${PORT}` } 
+    write(ws, {
+        type: 'HANDSHAKE',
+        data: { nodeUrl: `http://localhost:${PORT}` }
     });
 
     // 2. Gửi yêu cầu đồng bộ ngay khi kết nối
@@ -155,26 +155,26 @@ const connectToNodes = (newNodes) => {
         try {
             const url = new URL(nodeUrl);
             const nodePort = parseInt(url.port);
-            
+
             // 1. Tránh kết nối tới chính mình
             if (nodePort === PORT) return;
-            
+
             // 2. Tránh kết nối trùng lặp (nếu đã có trong danh sách networkNodes)
             if (networkNodes.includes(nodeUrl)) return;
-            
+
             // 3. Cơ chế tránh kết nối 2 chiều (Symmetric Connection)
             if (PORT > nodePort) {
                 return;
             }
 
             const wsUrl = `ws://${url.hostname}:${nodePort + 1000}`;
-            
+
             const attemptConnection = () => {
                 // Kiểm tra lại xem đã có kết nối chưa (tránh chồng chéo khi retry)
                 if (networkNodes.includes(nodeUrl)) return;
 
                 const ws = new WebSocket(wsUrl);
-                
+
                 ws.on('open', () => {
                     console.log(`🔗 Đã kết nối thành công tới peer: ${nodeUrl}`);
                     if (!networkNodes.includes(nodeUrl)) {
@@ -182,12 +182,12 @@ const connectToNodes = (newNodes) => {
                     }
                     initConnection(ws);
                 });
-                
+
                 ws.on('error', (err) => {
                     // console.log(`⏳ Đang thử kết nối lại tới ${nodeUrl} sau 5 giây...`);
-                    setTimeout(attemptConnection, 5000); 
+                    setTimeout(attemptConnection, 5000);
                 });
-                
+
                 ws.on('close', () => {
                     const index = networkNodes.indexOf(nodeUrl);
                     if (index > -1) networkNodes.splice(index, 1);
@@ -197,7 +197,7 @@ const connectToNodes = (newNodes) => {
             };
 
             attemptConnection();
-        } catch (err) {}
+        } catch (err) { }
     });
 };
 
@@ -209,37 +209,6 @@ const handleChainResponse = (receivedChain, originatingSocket) => {
     }
 };
 
-const resolveConflictsInternal = async () => {
-    let maxLength = myBlockchain.chain.length;
-    let longestChain = null;
-    for (const node of networkNodes) {
-        try {
-            console.log(`📡 Đang kiểm tra chuỗi từ node: ${node}`);
-            const response = await axios.get(`${node}/chain`);
-            const remoteChain = response.data.chain;
-            const remoteLength = response.data.length;
-            
-            if (remoteLength > maxLength) {
-                console.log(`   发现 chuỗi dài hơn (${remoteLength} > ${maxLength}). Đang xác thực...`);
-                if (myBlockchain.isChainValid(remoteChain).valid) {
-                    maxLength = remoteLength;
-                    longestChain = remoteChain;
-                } else {
-                    console.log(`   ❌ Chuỗi từ ${node} không hợp lệ!`);
-                }
-            }
-        } catch (err) {
-            console.log(`   ⚠️ Không thể kết nối tới ${node}: ${err.message}`);
-        }
-    }
-    if (longestChain) {
-        if (myBlockchain.replaceChain(longestChain)) {
-            // Sau khi thay thế chuỗi dài nhất, thông báo cho toàn mạng
-            broadcast({ type: 'CHAIN_UPDATED', data: myBlockchain.chain });
-            console.log('✅ Đã đồng bộ thành công chuỗi dài nhất từ mạng lưới.');
-        }
-    }
-};
 // ============================================
 // MIDDLEWARE CONFIGURATION
 // ============================================
@@ -346,10 +315,10 @@ app.post('/receive-transaction', (req, res) => {
     try {
         const tx = new Transaction(fromAddress, toAddress, amount, timestamp);
         tx.signature = signature;
-        
+
         // Thêm trực tiếp vào Mempool (Skip broadcast)
         myBlockchain.addTransaction(tx);
-        
+
         res.json({ success: true, message: "📥 Đã nhận giao dịch lan tỏa." });
     } catch (error) {
         res.status(400).json({ success: false, message: error.message });
@@ -529,7 +498,7 @@ app.post('/register-node', (req, res) => {
 
     if (nodeUrl && !networkNodes.includes(nodeUrl) && nodeUrl !== currentNodeUrl) {
         networkNodes.push(nodeUrl);
-        
+
         // Kết nối P2P WebSocket
         connectToNodes([nodeUrl]);
 
@@ -601,7 +570,7 @@ app.get('/resolve-conflicts', async (req, res) => {
 app.get('/balance/:address', (req, res) => {
     const address = req.params.address;
     const confirmedBalance = myBlockchain.getBalanceOfAddress(address);
-    
+
     // Tính số dư đang chờ (tổng số tiền gửi đi trong Mempool)
     const pendingAmount = myBlockchain.pendingTransactions
         .filter(tx => tx.fromAddress === address)

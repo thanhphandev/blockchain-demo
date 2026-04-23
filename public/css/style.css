@@ -209,6 +209,21 @@ code, .mono {
     color: white;
 }
 
+/* Action Card Grid */
+.action-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+}
+
+.action-card {
+    border-bottom: 3px solid var(--accent-primary);
+}
+
+.action-card .card-header {
+    justify-content: space-between;
+}
+
 .balance-display {
     text-align: center;
     padding: 1rem 0;
@@ -516,6 +531,12 @@ input:focus {
 
 @media (max-width: 768px) {
     .sidebar {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .action-grid {
         grid-template-columns: 1fr;
     }
 }
