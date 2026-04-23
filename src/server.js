@@ -49,15 +49,27 @@ const initP2PServer = () => {
 };
 
 const initConnection = (ws) => {
-    sockets.push(ws);
+    // Chỉ thêm vào danh sách nếu chưa tồn tại (tránh lỗi push trùng)
+    if (!sockets.includes(ws)) {
+        sockets.push(ws);
+    }
+
     ws.on('message', (data) => {
         try {
             const message = JSON.parse(data);
             handleMessage(ws, message);
         } catch (e) {}
     });
-    ws.on('close', () => sockets.splice(sockets.indexOf(ws), 1));
-    ws.on('error', () => sockets.splice(sockets.indexOf(ws), 1));
+
+    ws.on('close', () => {
+        const index = sockets.indexOf(ws);
+        if (index > -1) sockets.splice(index, 1);
+    });
+
+    ws.on('error', () => {
+        const index = sockets.indexOf(ws);
+        if (index > -1) sockets.splice(index, 1);
+    });
     
     // Gửi yêu cầu đồng bộ ngay khi kết nối
     write(ws, { type: 'REQUEST_CHAIN' });
@@ -91,33 +103,63 @@ const handleMessage = (ws, message) => {
             write(ws, { type: 'RESPONSE_CHAIN', data: myBlockchain.chain });
             break;
         case 'RESPONSE_CHAIN':
-            handleChainResponse(message.data);
+            handleChainResponse(message.data, ws);
             break;
     }
 };
 
-const broadcast = (message) => sockets.forEach(socket => write(socket, message));
-const write = (ws, message) => ws.send(JSON.stringify(message));
+/**
+ * broadcast() - Gửi tin nhắn tới toàn bộ các node đang kết nối
+ * @param {Object} message Dữ liệu tin nhắn
+ * @param {WebSocket} originatingSocket Socket nguồn (để tránh gửi ngược lại chính người gửi)
+ */
+const broadcast = (message, originatingSocket = null) => {
+    sockets.forEach(socket => {
+        // Chỉ gửi nếu không phải là socket nguồn
+        if (socket !== originatingSocket && socket.readyState === WebSocket.OPEN) {
+            write(socket, message);
+        }
+    });
+};
+
+const write = (ws, message) => {
+    if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(message));
+    }
+};
 
 const connectToNodes = (newNodes) => {
     newNodes.forEach(nodeUrl => {
-        // Tránh kết nối tới chính mình hoặc kết nối trùng lặp
-        if (networkNodes.includes(nodeUrl)) return;
-        
         try {
             const url = new URL(nodeUrl);
-            if (parseInt(url.port) === PORT) return;
+            const nodePort = parseInt(url.port);
             
-            const wsUrl = `ws://${url.hostname}:${parseInt(url.port) + 1000}`;
+            // 1. Tránh kết nối tới chính mình
+            if (nodePort === PORT) return;
+            
+            // 2. Tránh kết nối trùng lặp (nếu đã có trong danh sách networkNodes)
+            if (networkNodes.includes(nodeUrl)) return;
+            
+            // 3. Cơ chế tránh kết nối 2 chiều (Symmetric Connection)
+            // QUY TẮC: Chỉ node có cổng thấp hơn được phép chủ động kết nối tới node có cổng cao hơn
+            // Điều này đảm bảo giữa Node 3000 và 3001 chỉ có DUY NHẤT 1 kết nối (3000 -> 3001)
+            if (PORT > nodePort) {
+                // Node này có cổng cao hơn, nó sẽ đợi node cổng thấp hơn kết nối tới nó
+                // console.log(`ℹ️ Node ${PORT} đợi Node ${nodePort} chủ động kết nối...`);
+                return;
+            }
+
+            const wsUrl = `ws://${url.hostname}:${nodePort + 1000}`;
             const ws = new WebSocket(wsUrl);
             
             ws.on('open', () => {
+                console.log(`🔗 Đã kết nối thành công tới peer: ${nodeUrl}`);
                 networkNodes.push(nodeUrl);
                 initConnection(ws);
             });
             
             ws.on('error', () => {
-                // Im lặng khi không kết nối được (có thể node đó chưa bật)
+                // Im lặng khi không kết nối được
             });
             
             ws.on('close', () => {
@@ -128,9 +170,10 @@ const connectToNodes = (newNodes) => {
     });
 };
 
-const handleChainResponse = (receivedChain) => {
+const handleChainResponse = (receivedChain, originatingSocket) => {
     if (myBlockchain.replaceChain(receivedChain)) {
-        broadcast({ type: 'CHAIN_UPDATED', data: myBlockchain.chain });
+        // Lan tỏa thông báo cập nhật chuỗi nhưng tránh gửi ngược lại người vừa gửi cho mình
+        broadcast({ type: 'CHAIN_UPDATED', data: myBlockchain.chain }, originatingSocket);
         console.log('✅ Chuỗi đã được cập nhật từ node khác.');
     }
 };
@@ -160,6 +203,7 @@ const resolveConflictsInternal = async () => {
     }
     if (longestChain) {
         if (myBlockchain.replaceChain(longestChain)) {
+            // Sau khi thay thế chuỗi dài nhất, thông báo cho toàn mạng
             broadcast({ type: 'CHAIN_UPDATED', data: myBlockchain.chain });
             console.log('✅ Đã đồng bộ thành công chuỗi dài nhất từ mạng lưới.');
         }

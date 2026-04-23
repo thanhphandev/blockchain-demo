@@ -19,7 +19,7 @@ npm run network
 
 ---
 
-## 🧪 2. Kịch Bản Trình Diễn (6 Giai Đoạn)
+## 🧪 2. Kịch Bản Trình Diễn (7 Giai Đoạn)
 
 ### Giai Đoạn 1: Thiết Lập Danh Tính (Identity & Keys)
 *Mục tiêu: Hiểu về ví tiền và tính ẩn danh.*
@@ -68,6 +68,15 @@ npm run network
 3.  **Hậu quả**: Toàn bộ các khối phía sau sẽ chuyển sang màu đỏ và hệ thống báo động **"Bị Xâm Phạm"**.
 4.  **Giải thích**: Vì mã Hash của khối sau phụ thuộc vào khối trước, việc sửa đổi 1 ký tự sẽ phá vỡ toàn bộ "sợi xích" liên kết.
 
+### Giai Đoạn 7: Điều Khiển Bằng AI Agent (AI-Powered Control)
+*Mục tiêu: Trình diễn khả năng tích hợp công nghệ AI vào quản trị Blockchain.*
+1.  Nhấp vào biểu tượng robot ở góc màn hình.
+2.  Nhập lệnh bằng tiếng Việt hoặc tiếng Anh, ví dụ:
+    - *"Gửi 10 MBC cho địa chỉ [Dán địa chỉ vào]"*
+    - *"Thực hiện đào block mới"*
+    - *"Kiểm tra tính toàn vẹn của chuỗi"*
+3.  **Quan sát**: AI sẽ tự động phân tích ý định và thực hiện các thao tác click, nhập liệu trên giao diện cho bạn.
+
 ---
 
 ## 🔎 3. Kiểm Tra & Phát Hiện Lỗi (Testing & Debugging)
@@ -104,14 +113,5 @@ Hệ thống này không chỉ là mã nguồn, nó là mô hình thu nhỏ củ
 
 ---
 *Biên soạn bởi Antigravity cho Đồ án Mini Blockchain v3.0*
-### 6. 🤖 Điều Khiển Bằng AI Agent (Mới)
-Hệ thống hiện đã tích hợp **Page Agent**, cho phép bạn điều khiển Blockchain Explorer bằng ngôn ngữ tự nhiên:
-1. Nhấp vào biểu tượng robot ở góc màn hình.
-2. Nhập lệnh bằng tiếng Việt hoặc tiếng Anh, ví dụ:
-   - *"Gửi 10 MBC cho địa chỉ [Dán địa chỉ vào]"*
-   - *"Thực hiện đào block mới"*
-   - *"Kiểm tra tính toàn vẹn của chuỗi"*
-3. AI sẽ tự động thực hiện các thao tác click và nhập liệu cho bạn.
 
----
 **Lưu ý:** Đây là phiên bản demo sử dụng API LLM miễn phí. Để sử dụng ổn định lâu dài, hãy thay thế `apiKey` trong file `index.html`.

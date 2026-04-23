@@ -107,7 +107,7 @@ function initWebSocket() {
 }
 
 async function refreshData(showValidationToast = false) {
-  const [chainRes, pendingRes, difficultyRes, validRes] = await Promise.all([
+  const [chainRes, pendingRes, difficultyRes, validRes, infoRes] = await Promise.all([
     getChain(),
     getPendingTransactions(),
     getDifficulty(),

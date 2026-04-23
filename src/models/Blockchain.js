@@ -210,6 +210,9 @@ class Blockchain {
         // Tạo chuỗi target để kiểm tra PoW
         const target = Array(this.difficulty + 1).join("0");
 
+        // Tập hợp các hash giao dịch đã thấy để kiểm tra trùng lặp trên toàn chuỗi
+        const seenTransactionHashes = new Set();
+
         // Duyệt từ block thứ 1 (bỏ qua Genesis Block)
         for (let i = 1; i < chainToValidate.length; i++) {
             let currentBlock = chainToValidate[i];
@@ -254,14 +257,30 @@ class Blockchain {
             // ========================================
             // KIỂM TRA 3: Hash có thỏa mãn Proof of Work không?
             // ========================================
-            // Hash phải bắt đầu bằng số lượng số 0 tương ứng difficulty
-            // Điều này ngăn chặn việc tạo block giả mà không đào thực sự
             if (currentBlock.hash.substring(0, this.difficulty) !== target) {
                 return {
                     valid: false,
                     message: `❌ Block #${i} có hash không hợp lệ! Không đủ độ khó PoW.`,
                     invalidBlockIndex: i
                 };
+            }
+
+            // ========================================
+            // KIỂM TRA 4: Kiểm tra trùng lặp giao dịch (Double Spending/Replay)
+            // ========================================
+            for (const txData of currentBlock.transactions) {
+                // Tái tạo transaction để tính hash chính xác
+                const tx = new Transaction(txData.fromAddress, txData.toAddress, txData.amount, txData.timestamp);
+                const txHash = tx.calculateHash();
+
+                if (seenTransactionHashes.has(txHash)) {
+                    return {
+                        valid: false,
+                        message: `❌ Phát hiện giao dịch bị trùng lặp (Double Spend) trong Block #${i}!`,
+                        invalidBlockIndex: i
+                    };
+                }
+                seenTransactionHashes.add(txHash);
             }
         }
 
