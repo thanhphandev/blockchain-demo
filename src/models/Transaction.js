@@ -46,7 +46,7 @@ class Transaction {
         // Kiểm tra xem Private Key có khớp với ví From không
         // Người dùng chỉ có thể dùng Private key của họ để ký cho địa chỉ ví của họ.
         if (signingKey.getPublic('hex') !== this.fromAddress) {
-            throw new Error('❌ Lỗi Bảo Mật: Bạn không thể ký giao dịch thay cho ví khác!');
+            throw new Error('Lỗi Bảo Mật: Bạn không thể ký giao dịch thay cho ví khác!');
         }
 
         const hashTx = this.calculateHash();
@@ -67,15 +67,15 @@ class Transaction {
         }
 
         if (!this.signature || this.signature.length === 0) {
-            throw new Error('❌ Giao dịch thiếu chữ ký!');
+            throw new Error('Giao dịch thiếu chữ ký!');
         }
 
         if (this.amount <= 0) {
-            throw new Error('❌ Số lượng chuyển phải lớn hơn 0!');
+            throw new Error('Số lượng chuyển phải lớn hơn 0!');
         }
 
         if (!this.toAddress) {
-            throw new Error('❌ Thiếu địa chỉ người nhận!');
+            throw new Error('Thiếu địa chỉ người nhận!');
         }
 
         // Tái tạo lại Public Key object từ chuỗi Hex

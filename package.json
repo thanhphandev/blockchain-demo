@@ -9,6 +9,8 @@
     "node1": "cross-env PORT=3000 node src/server.js",
     "node2": "cross-env PORT=3001 node src/server.js",
     "node3": "cross-env PORT=3002 node src/server.js",
+    "node4": "cross-env PORT=3003 node src/server.js",
+    "node5": "cross-env PORT=3004 node src/server.js",
     "network": "concurrently \"npm run node1\" \"npm run node2\" \"npm run node3\""
   },
   "keywords": [

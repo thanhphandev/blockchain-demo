@@ -94,6 +94,7 @@ function initWebSocket() {
       case 'NEW_TRANSACTION':
       case 'NEW_BLOCK':
       case 'CHAIN_UPDATED':
+      case 'PEERS_UPDATED':
         // Cập nhật giao diện ngay lập tức mà không cần F5
         refreshData();
         break;

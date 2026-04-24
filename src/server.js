@@ -49,34 +49,22 @@ const initP2PServer = () => {
 };
 
 const initConnection = (ws) => {
-    // Chỉ thêm vào danh sách nếu chưa tồn tại (tránh lỗi push trùng)
-    if (!sockets.includes(ws)) {
-        sockets.push(ws);
+    // Nếu socket này đã có trong danh sách (theo tham chiếu) thì bỏ qua
+    if (sockets.includes(ws)) return;
+
+    // Nếu đã có một socket khác kết nối tới cùng một nodeUrl, hãy đóng socket cũ
+    if (ws.nodeUrl) {
+        const existingSocketIndex = sockets.findIndex(s => s !== ws && s.nodeUrl === ws.nodeUrl);
+        if (existingSocketIndex > -1) {
+            console.log(`♻️  Thay thế socket cũ cho node: ${ws.nodeUrl}`);
+            sockets[existingSocketIndex].close();
+            sockets.splice(existingSocketIndex, 1);
+        }
     }
 
-    ws.on('message', (data) => {
-        try {
-            const message = JSON.parse(data);
-            handleMessage(ws, message);
-        } catch (e) { }
-    });
-
-    ws.on('close', () => {
-        const index = sockets.indexOf(ws);
-        if (index > -1) sockets.splice(index, 1);
-
-        // Tìm và xóa khỏi networkNodes nếu có nodeUrl gắn kèm
-        const nodeUrl = ws.nodeUrl;
-        if (nodeUrl) {
-            const nIndex = networkNodes.indexOf(nodeUrl);
-            if (nIndex > -1) networkNodes.splice(nIndex, 1);
-        }
-    });
-
-    ws.on('error', () => {
-        const index = sockets.indexOf(ws);
-        if (index > -1) sockets.splice(index, 1);
-    });
+    sockets.push(ws);
+    initMessageHandler(ws);
+    initErrorHandler(ws);
 
     // 1. Gửi định danh (HTTP URL) của mình cho peer mới
     write(ws, {
@@ -88,6 +76,34 @@ const initConnection = (ws) => {
     write(ws, { type: 'REQUEST_CHAIN' });
 };
 
+const initMessageHandler = (ws) => {
+    ws.on('message', (data) => {
+        try {
+            const message = JSON.parse(data);
+            handleMessage(ws, message);
+        } catch (e) { }
+    });
+};
+
+const initErrorHandler = (ws) => {
+    const handleDisconnection = () => {
+        const index = sockets.indexOf(ws);
+        if (index > -1) sockets.splice(index, 1);
+
+        const nodeUrl = ws.nodeUrl;
+        if (nodeUrl) {
+            const nIndex = networkNodes.indexOf(nodeUrl);
+            if (nIndex > -1) {
+                networkNodes.splice(nIndex, 1);
+                broadcast({ type: 'PEERS_UPDATED', data: networkNodes });
+            }
+        }
+    };
+
+    ws.on('close', handleDisconnection);
+    ws.on('error', handleDisconnection);
+};
+
 const handleMessage = (ws, message) => {
     switch (message.type) {
         case 'HANDSHAKE':
@@ -96,6 +112,8 @@ const handleMessage = (ws, message) => {
                 console.log(`🤝 Nhận handshake từ peer: ${remoteUrl}`);
                 networkNodes.push(remoteUrl);
                 ws.nodeUrl = remoteUrl; // Lưu URL vào socket để quản lý khi đóng
+                // Thông báo cho trình duyệt
+                broadcast({ type: 'PEERS_UPDATED', data: networkNodes });
             }
             break;
         case 'NEW_TRANSACTION':
@@ -161,19 +179,12 @@ const connectToNodes = (newNodes) => {
             // 1. Tránh kết nối tới chính mình
             if (nodePort === PORT) return;
 
-            // 2. Tránh kết nối trùng lặp (nếu đã có trong danh sách networkNodes)
-            if (networkNodes.includes(nodeUrl)) return;
-
-            // 3. Cơ chế tránh kết nối 2 chiều (Symmetric Connection)
-            if (PORT > nodePort) {
-                return;
-            }
-
             const wsUrl = `ws://${url.hostname}:${nodePort + 1000}`;
 
             const attemptConnection = () => {
-                // Kiểm tra lại xem đã có kết nối chưa (tránh chồng chéo khi retry)
-                if (networkNodes.includes(nodeUrl)) return;
+                // Kiểm tra xem socket tới node này đã tồn tại chưa (tránh kết nối đè)
+                const alreadyConnected = sockets.some(s => s.nodeUrl === nodeUrl);
+                if (alreadyConnected) return;
 
                 const ws = new WebSocket(wsUrl);
 
@@ -181,19 +192,24 @@ const connectToNodes = (newNodes) => {
                     console.log(`🔗 Đã kết nối thành công tới peer: ${nodeUrl}`);
                     if (!networkNodes.includes(nodeUrl)) {
                         networkNodes.push(nodeUrl);
+                        // Thông báo cho trình duyệt cập nhật danh sách
+                        broadcast({ type: 'PEERS_UPDATED', data: networkNodes });
                     }
+                    ws.nodeUrl = nodeUrl; 
                     initConnection(ws);
                 });
 
                 ws.on('error', (err) => {
-                    // console.log(`⏳ Đang thử kết nối lại tới ${nodeUrl} sau 5 giây...`);
                     setTimeout(attemptConnection, 5000);
                 });
 
                 ws.on('close', () => {
                     const index = networkNodes.indexOf(nodeUrl);
-                    if (index > -1) networkNodes.splice(index, 1);
-                    // Khi mất kết nối, thử kết nối lại
+                    if (index > -1) {
+                        networkNodes.splice(index, 1);
+                        // Thông báo cho trình duyệt cập nhật danh sách
+                        broadcast({ type: 'PEERS_UPDATED', data: networkNodes });
+                    }
                     setTimeout(attemptConnection, 5000);
                 });
             };
@@ -498,15 +514,14 @@ app.post('/register-node', (req, res) => {
     const { nodeUrl } = req.body;
     const currentNodeUrl = `http://localhost:${PORT}`;
 
-    if (nodeUrl && !networkNodes.includes(nodeUrl) && nodeUrl !== currentNodeUrl) {
-        networkNodes.push(nodeUrl);
-
-        // Kết nối P2P WebSocket
+    if (nodeUrl && nodeUrl !== currentNodeUrl) {
+        // Thực hiện kết nối P2P WebSocket
+        // Hàm connectToNodes sẽ tự động thêm vào networkNodes nếu kết nối thành công
         connectToNodes([nodeUrl]);
 
         res.json({
             success: true,
-            message: `✅ Đã đăng ký node HTTP và kết nối P2P WebSocket: ${nodeUrl}`,
+            message: `🔄 Đang thử thiết lập kết nối tới: ${nodeUrl}. Vui lòng kiểm tra danh sách node sau giây lát.`,
             nodes: networkNodes
         });
     } else {

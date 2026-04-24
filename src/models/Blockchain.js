@@ -74,16 +74,16 @@ class Blockchain {
      */
     addTransaction(transaction) {
         if (!transaction.fromAddress || !transaction.toAddress) {
-            throw new Error('❌ Giao dịch phải có địa chỉ người gửi và người nhận!');
+            throw new Error('Giao dịch phải có địa chỉ người gửi và người nhận!');
         }
 
         // 1. Kiểm tra chữ ký
         if (!transaction.isValid()) {
-            throw new Error('❌ Chữ ký giao dịch không hợp lệ!');
+            throw new Error('Chữ ký giao dịch không hợp lệ!');
         }
 
         // 2. Kiểm tra trùng lặp trong Mempool (Hàng đợi)
-        const isDuplicateMempool = this.pendingTransactions.some(tx => 
+        const isDuplicateMempool = this.pendingTransactions.some(tx =>
             tx.calculateHash && tx.calculateHash() === transaction.calculateHash()
         );
         if (isDuplicateMempool) {
@@ -93,16 +93,16 @@ class Blockchain {
 
         // 3. Kiểm tra xem giao dịch đã tồn tại trong Blockchain chưa (Tránh Replay Attack)
         for (const block of this.chain) {
-            const isAlreadyOnChain = block.transactions.some(tx => 
+            const isAlreadyOnChain = block.transactions.some(tx =>
                 tx.calculateHash && tx.calculateHash() === transaction.calculateHash()
             );
             if (isAlreadyOnChain) {
-                throw new Error('❌ Giao dịch này đã được xác nhận trong một khối trước đó!');
+                throw new Error('Giao dịch này đã được xác nhận trong một khối trước đó!');
             }
         }
 
         if (transaction.amount <= 0) {
-            throw new Error('❌ Số lượng chuyển phải lớn hơn 0!');
+            throw new Error('Số lượng chuyển phải lớn hơn 0!');
         }
 
         // 2. KIỂM TRA SỐ DƯ (Ngăn chặn Double Spending)
@@ -116,7 +116,7 @@ class Blockchain {
 
         // Kiểm tra lỗi Double Spending hoặc số dư không đủ
         if (availableBalance < transaction.amount) {
-            throw new Error(`❌ Lỗi: Double Spending! Số dư khả dụng không đủ (Ví có: ${balanceOnChain} MBC, Đang đợi trong Mempool: ${pendingAmount} MBC, Yêu cầu thêm: ${transaction.amount} MBC)`);
+            throw new Error(`Lỗi: Double Spending! Số dư khả dụng không đủ (Ví có: ${balanceOnChain} MBC, Đang đợi trong Mempool: ${pendingAmount} MBC, Yêu cầu thêm: ${transaction.amount} MBC)`);
         }
 
         this.pendingTransactions.push(transaction);
@@ -238,7 +238,7 @@ class Blockchain {
             if (currentBlock.hash !== currentBlock.calculateHash()) {
                 return {
                     valid: false,
-                    message: `❌ Block #${i} bị sửa đổi! Hash không khớp với dữ liệu.`,
+                    message: `Block #${i} bị sửa đổi! Hash không khớp với dữ liệu.`,
                     invalidBlockIndex: i
                 };
             }
@@ -249,7 +249,7 @@ class Blockchain {
             if (currentBlock.previousHash !== previousBlock.hash) {
                 return {
                     valid: false,
-                    message: `❌ Block #${i} mất liên kết! previousHash không khớp với Block #${i - 1}.`,
+                    message: `Block #${i} mất liên kết! previousHash không khớp với Block #${i - 1}.`,
                     invalidBlockIndex: i
                 };
             }
@@ -260,7 +260,7 @@ class Blockchain {
             if (currentBlock.hash.substring(0, this.difficulty) !== target) {
                 return {
                     valid: false,
-                    message: `❌ Block #${i} có hash không hợp lệ! Không đủ độ khó PoW.`,
+                    message: `Block #${i} có hash không hợp lệ! Không đủ độ khó PoW.`,
                     invalidBlockIndex: i
                 };
             }
@@ -276,7 +276,7 @@ class Blockchain {
                 if (seenTransactionHashes.has(txHash)) {
                     return {
                         valid: false,
-                        message: `❌ Phát hiện giao dịch bị trùng lặp (Double Spend) trong Block #${i}!`,
+                        message: `Phát hiện giao dịch bị trùng lặp (Double Spend) trong Block #${i}!`,
                         invalidBlockIndex: i
                     };
                 }
@@ -287,7 +287,7 @@ class Blockchain {
         // Tất cả block đều hợp lệ
         return {
             valid: true,
-            message: "✅ Blockchain hoàn toàn hợp lệ! Tất cả các block đều nguyên vẹn.",
+            message: "Blockchain hoàn toàn hợp lệ! Tất cả các block đều nguyên vẹn.",
             invalidBlockIndex: null
         };
     }
@@ -304,7 +304,7 @@ class Blockchain {
             return false;
         }
 
-        console.log(`⛓️  Đang kiểm tra chuỗi mới (Độ dài: ${newChain.length})...`);
+        console.log(`Đang kiểm tra chuỗi mới (Độ dài: ${newChain.length})...`);
         const validation = this.isChainValid(newChain);
         if (!validation.valid) {
             console.log(`❌ Chuỗi mới không hợp lệ: ${validation.message}`);
@@ -343,7 +343,7 @@ class Blockchain {
         if (index < 0 || index >= this.chain.length) {
             return {
                 success: false,
-                message: `❌ Không tìm thấy Block #${index}`
+                message: `Không tìm thấy Block #${index}`
             };
         }
 
@@ -351,7 +351,7 @@ class Blockchain {
         if (index === 0) {
             return {
                 success: false,
-                message: "❌ Không thể sửa Genesis Block!"
+                message: "Không thể sửa Genesis Block!"
             };
         }
 
@@ -375,12 +375,12 @@ class Blockchain {
         console.log(`\n🔓 TAMPER ATTACK trên Block #${index}:`);
         console.log(`   Dữ liệu cũ: ${oldData}`);
         console.log(`   Dữ liệu mới: ${JSON.stringify(newData)}`);
-        console.log(`   Hash (giữ nguyên): ${this.chain[index].hash}`);
+        console.log(`   Hash (giữ nguyên): ${oldHash}`);
         console.log(`\n⚠️  Block đã bị sửa đổi! Gọi /is-valid để kiểm tra.\n`);
 
         return {
             success: true,
-            message: `🔓 Block #${index} đã bị sửa đổi thành công!`,
+            message: `Block #${index} đã bị sửa đổi thành công!`,
             tamperedBlock: this.chain[index]
         };
     }

@@ -502,8 +502,8 @@ input:focus {
 }
 
 .toast.show { transform: translateX(0); }
-.toast-success { border-left: 4px solid var(--accent-success); }
-.toast-error { border-left: 4px solid var(--accent-danger); }
+.toast-success { border: 3px solid var(--accent-success); }
+.toast-error { border: 3px solid var(--accent-danger); }
 
 .toast-title { font-weight: 700; font-size: 0.9rem; }
 .toast-msg { font-size: 0.8rem; color: var(--text-secondary); }
